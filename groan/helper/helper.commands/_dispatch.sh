@@ -75,19 +75,19 @@ function find_commands()
 #note $subcommand requested may be partial and $scriptSubcommand is the matched result
 [ -z "$subcommand" ] && subcommand="$defaultSubcommand"
 
-target="${subcommand}*.sub.*"
-exact="${subcommand}.sub.*"
+d_target="${subcommand}*.sub.*"
+d_exact="${subcommand}.sub.*"
 
-$DEBUG && echo "Looking for $target in: $scriptDir"
+$DEBUG && echo "Looking for $d_target in: $scriptDir"
 
-# if an exact match is available - upgrade the target to prioritize the exact match
-for scriptPath in $scriptDir/$exact
+# if an d_exact match is available - upgrade the d_target to prioritize the d_exact match
+for scriptPath in $scriptDir/$d_exact
 do
-    target=$exact
+    d_target=$d_exact
 done
 
 list=()
-for scriptPath in $scriptDir/$target
+for scriptPath in $scriptDir/$d_target
 do
     parseScriptPath "$scriptPath"
 
@@ -98,7 +98,7 @@ do
 done
 
 if [ ${#list[@]} -eq 1 ]; then #One script matches
-  for scriptPath in $scriptDir/$target
+  for scriptPath in $scriptDir/$d_target
   do
       [[ "$scriptSubcommand" == _* ]] || breadcrumbs="$breadcrumbs $scriptSubcommand"
       executeScriptPath "$scriptPath"
