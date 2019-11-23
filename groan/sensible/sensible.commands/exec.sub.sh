@@ -12,7 +12,7 @@ usage=\
 $breadcrumbs --tags=<a>,<b>  # select tagged hosts to execute on
 $breadcrumbs --help          # this message"
 
-$SHOWHELP && executeHelp
+$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

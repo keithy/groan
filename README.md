@@ -47,10 +47,10 @@ new command suite then you can pull-request your enhancements, and others can se
 
 Rename files and directories `rename_me`, `rename_me.locations.sh`
 
-Your subcommands go into `sub-commands` folder.
+Your c_sub_cmds go into `sub-commands` folder.
 
 Add another nested/merged command by adding the folder. For an example of the `help` sub-command calling
-the nested `helper` command's own dispatcher for its sub-commands look at `help.sub.helper.cmd._dispatch.sh`
+the nested `helper` command's own g_dispatcher for its sub-commands look at `help.sub.helper.cmd._dispatch.sh`
 
 To use this feature copy the file as is and rename it to point to any other sub-sub-command.
 
@@ -79,14 +79,14 @@ if I should ever develop any.
 * reads a config file (to set environment vars) before running sub-commands
 * sub-commands may be written in any shell or language
 * sub-commands can run as source, exec, or eval
-* help subcommand included provides:
+* help c_sub_cmd included provides:
 	* list of help topics - `groan help topics`
 	* list of commands and their usage - `groan help commands` / `groan commands`
 	* markdown viewer support
 	
 ## General Principles
 
-Groan subcommands are called after having:
+Groan c_sub_cmds are called after having:
 
 * processed and filtered out the standard set of flags.
     * --verbose -V
@@ -104,11 +104,11 @@ Groan looks for config files in a number of places. This is configured in `renam
 
 ## Sub-Commands
 
-...follow the convention `sub-commands/<subcommand>.sub.sh`
+...follow the convention `sub-commands/<c_sub_cmd>.sub.sh`
 
-* `<name>.sub.sh` will source the subcommand
-* `<name>.sub.exec` will exec the subcommand
-* `<name>.sub.*` will eval the subcommand
+* `<name>.sub.sh` will source the c_sub_cmd
+* `<name>.sub.exec` will exec the c_sub_cmd
+* `<name>.sub.*` will eval the c_sub_cmd
 	* `<name>.sub.rb`
 	* `<name>.sub.fish` ...etc
 
@@ -116,7 +116,7 @@ Non-shell scripts provide their help metadata via `<name>.meta.sh`
 
 ### Subcommand - help topics (provided by `helper`)
 
-The help subcommand included provides:
+The help c_sub_cmd included provides:
 
 * Display text file giving information on a topic e.g. `groan help topic test-topic`
 	* `<topicname>.topic.txt` e.g. `test-topic.topic.txt`    
@@ -132,7 +132,7 @@ Commands are implemented expecting that they may be run with the METADATAONLY fl
 
 ### Subcommand - environment
 
-The environment subcommand prints out the environment variables (or evaluates a given expression) in the context of where scripts will run, after applying the config file.
+The environment c_sub_cmd prints out the environment variables (or evaluates a given expression) in the context of where scripts will run, after applying the config file.
 
 * `groan environment --eval "echo $PATH"`
 

@@ -11,7 +11,7 @@ description="dummy (test for duplication)"
 usage=\
 "$breadcrumbs test"
 
-$SHOWHELP && executeHelp
+$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 echo "This is a placeholder"

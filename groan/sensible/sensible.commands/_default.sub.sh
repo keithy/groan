@@ -11,7 +11,7 @@ usage=\
 "$breadcrumbs               # test ssh connections
 $breadcrumbs --help        # this message"
 
-$SHOWHELP && executeHelp
+$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
  

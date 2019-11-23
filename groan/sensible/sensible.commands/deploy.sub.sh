@@ -15,7 +15,7 @@ $breadcrumbs --install --confirm    # install symbolic link on path
 $breadcrumbs --remove --confirm     # undeploy
 $breadcrumbs --help                 # this message"
 
-$SHOWHELP && executeHelp
+$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"
@@ -86,7 +86,7 @@ if $REMOVE; then
       if [[ ",all,${sensible_tags[$host]}," == *,"$tag,"* ]]; then
         $LOUD && echo "${host}(${tag}):" ${sensible_deploy[$host]}
         code_at="${sensible_deploy[$host]##*:}"    
-        linked_to="${sensible_install[$host]:-${sensible_install["_default_"]}}/${rootCommandFile##*/}"
+        linked_to="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_root_cmd_file##*/}"
         $LOUD && echo ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" rm -rf "${linked_to}" "${code_at}"
         $CONFIRM && ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" rm -rf "${linked_to}" "${code_at}" || true  
         $DRYRUN && echo "${dim}dryrun:  --confirm required to proceed ${reset}"
@@ -102,11 +102,11 @@ for host in ${sensible_host_names[@]}; do
     if [[ ",all,${sensible_tags[$host]}," == *,"$tag,"* ]]; then
  
       $LOUD && echo "${host}(${tag}):" ${sensible_deploy[$host]}
-      $LOUD && echo rsync -a --delete "${r_options[@]}"  "${rootCommandFile%/*}/*" "${sensible_deploy[$host]}"
-      rsync -a --delete "${r_options[@]}" "${rootCommandFile%/*}/"* "${sensible_deploy[$host]}"
+      $LOUD && echo rsync -a --delete "${r_options[@]}"  "${g_root_cmd_file%/*}/*" "${sensible_deploy[$host]}"
+      rsync -a --delete "${r_options[@]}" "${g_root_cmd_file%/*}/"* "${sensible_deploy[$host]}"
       
-      install_src="${sensible_deploy[$host]##*:}/${rootCommandFile##*/}"    
-      install_dest="${sensible_install[$host]:-${sensible_install["_default_"]}}/${rootCommandFile##*/}"
+      install_src="${sensible_deploy[$host]##*:}/${g_root_cmd_file##*/}"    
+      install_dest="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_root_cmd_file##*/}"
       $LOUD && $INSTALL && echo ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" "mkdir -p \"${install_dest%/*}\" && ln -s \"${install_src}\" \"${install_dest}\""
       $CONFIRM && $INSTALL && ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" "mkdir -p \"${install_dest%/*}\" && ln -s \"${install_src}\" \"${install_dest}\"" || true
       $CONFIRM && echo "done"
