@@ -27,6 +27,7 @@ set -euo pipefail
 IFS=$'\n\t'
 shopt -s nullglob # make sure globs are empty arrays if nothing is found
 set -o allexport
+NL=$'\n'
 
 # FUNCTIONS
 
@@ -174,6 +175,7 @@ function g_displayHelp {
     printf "${bold}options:${reset}\n${optionsLongForm}\n\n"
   fi
   printf "${bold}usage:${reset}\n${usage}\n"
+  [[ ! -z ${help_postscript+x} ]] && printf "\n$help_postscript\n"
 }
 
 function g_checkForMarkdownViewer {

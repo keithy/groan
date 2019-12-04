@@ -9,7 +9,7 @@ description="create a new project/file structure from a template"
 options=\
 "--options|--list    # list available templates
 --confirm            # not a dry run - perform action
---template=<hoice>   # selection (-t=<choice>)
+--template=<choice>  # selection (-t=<choice>)
 --<choice>           # selection (like cargo)
 --go-ahead           # allow copy into existing project"
  
@@ -29,11 +29,10 @@ for presetDir in "${g_config_preset_locations[@]}"
 do
    	for found in "$presetDir/"*.tmpl
    	do
-       	extra="$extra  ${found##*/} - "
-       	title="\n"
+       	title=""
        	#[[ -f "$found/.gitignore" ]] && title="$(grep -m 1 -i "^#" "$found/.gitignore")"
        	[[ -f "$found/README.md" ]] && title="$(grep -m 1 -i "^#" "$found/README.md")"
-       	extra="$extra$title"
+       	extra="$(printf "$extra %17s - $title" "${found##*/}")\n"
    	done
 done
 

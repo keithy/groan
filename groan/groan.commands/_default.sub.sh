@@ -18,7 +18,6 @@ crumbsList=()
 
 # start search at this level, not the top level
 g_findCommands "$c_file" "$breadcrumbs" false
-echo "${bold}HERE DDDDD${reset} [${crumbsList[*]}]"
 
 function list_sub_cmds()
 {
