@@ -20,18 +20,21 @@ commonOptionsLong=\
 "--help --quiet --verbose --debug"
 commonOptionsShort=\
 "-h     -q      -V        -D"
-# STRICT-MODE
 
+# Unofficial Bash Strict Mode
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 set -euo pipefail
 IFS=$'\n\t'
 shopt -s nullglob # make sure globs are empty arrays if nothing is found
 set -o allexport
+
+# Useful
 NL=$'\n'
 
-# FUNCTIONS
+# Standard means for platform determination for use with case match expressions
 g_PLATFORM="${BASH_VERSINFO[5]}" # the simplest to use determinator?
 
+# Utility to verify if sudo is available
 function g_needsSudo() {
     local prompt
     prompt=$(sudo -nv 2>&1)
@@ -102,17 +105,20 @@ function g_readThemes # from
 {
   local g_theme_file
   bold=$''; dim=$''; bold=$''; reset=$''
-  for g_theme_file in "${g_locations[@]}/theme*.sh"
-    do
-        if [[ -f "$g_theme_file" ]]
-        then
-            $DEBUG && echo "Theme< $g_theme_file"
-            source "$g_theme_file"
-        else
-            $DEBUG && echo "ThemeX $g_theme_file"
-        fi
-    done
 
+  for s_dir in "${g_locations[@]}"
+  do
+  	for g_theme_file in "$s_dir"/theme*.sh
+	do
+		if [[ -f "$g_theme_file" ]]
+		then
+			$DEBUG && echo "Theme< $g_theme_file"
+			source "$g_theme_file"
+		else
+			$DEBUG && echo "ThemeX $g_theme_file"
+		fi
+	done
+  done
   return 0
 }
 
@@ -121,9 +127,18 @@ function g_readThemes # from
 function g_executeScriptPath {
 
   s_path="$1"
+  local s_meta_path="${s_path/.sub.*/.meta.sh}"
 
   local title="Running"
   $METADATAONLY && title="Metadata<"
+
+  if [[ -f "$s_meta_path" ]]; then
+        $DEBUG && echo "Metadata< $s_meta_path"
+        source "$s_meta_path" "${args[@]:+${args[@]}}"
+
+        $SHOWHELP && g_displayHelp
+        $METADATAONLY && return
+  fi
 
   case "${s_path##*.}" in
     sh)
@@ -146,13 +161,7 @@ function g_executeScriptPath {
         return
     ;;
     *)
-        $DEBUG && echo "Metadata< ${s_path/.sub.*/.meta.sh}"
-        source "${s_path/.sub.*/.meta.sh}" "${args[@]:+${args[@]}}"
-
-        $SHOWHELP && g_displayHelp
-        $METADATAONLY && return
-
-        $DEBUG && echo "Eval> $s_path ${args[@]:+${args[@]}}"
+        $DEBUG && echo "$title eval> $s_path ${args[@]:+${args[@]}}"
         eval "$s_path" "${args[@]:+${args[@]}}"
         exit 0
     ;;

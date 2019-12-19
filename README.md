@@ -16,12 +16,12 @@ _noun_
 `Groan` is a simple extensible bash framework (similar to [sub](https://github.com/basecamp/sub))
 for creating a suite of scripts that have similar command, sub-command usage style to git/bzr/hg/docker etc.
 
-Clone this repository, and rename the files 'rename_me' to be the top level name of your command.
-Add your scripts (in any language) and help topics, to the `sub-commands` folder. 
+Clone this repository, and rename 'groan' to be the top level name of YOUR command.
+Add your scripts (in any language) and help topics, to the `commands` folder. 
 
 Your command can be nested within other commands, or you can compose your command from others. 
 The help facilities are provided by the enclosed command `helper`, and the remote upload and execution capability
-is provided by the command `sensible`.
+is provided by the command `sensible`. Pick and choose modules that you wish to include.
 
 ## Commands with sub-commands and sub-sub-commands...
 
@@ -34,25 +34,13 @@ Groan is recursively merge-able/compose-able. Assemble a named suite of sub-comm
 that folder may be made available alongside, or nested as sub-commands within another suite.
 
 Groan uses/demonstrates this internally to implement the help sub-command. 
-The `groan help` sub-command of `groan` is implemented by the nested command `helper`. 
-
-In the folder hierarchy `yourcommand/groan/helper` there is a fully functioning suite of 
-bash commands called `helper`, nested as a sub-command within another suite called `groan`, 
-merged with another for you to customize called `rename_me`. 
+The `groan help` sub-command of `groan` is implemented by the nested folder of commands `helper/commands`.
+The mapping is implemented by the command: `help.sub.helper.cmd._dispatch.sh`
 
 ## How to fork and roll your own command
 
 Fork **keithy/groan** to **yourrepo/yourcommand** then create your working branch with the name of your
-new command suite then you can pull-request your enhancements, and others can see what you are using it for.
-
-Rename files and directories `rename_me`, `rename_me.locations.sh`
-
-Your c_sub_cmds go into `sub-commands` folder.
-
-Add another nested/merged command by adding the folder. For an example of the `help` sub-command calling
-the nested `helper` command's own g_dispatcher for its sub-commands look at `help.sub.helper.cmd._dispatch.sh`
-
-To use this feature copy the file as is and rename it to point to any other sub-sub-command.
+new command. To contibute your command back submit a pull-request.
 
 ## History
 
@@ -74,19 +62,21 @@ if I should ever develop any.
 ## Features
 
 * supports default option flags (--verbose --quiet --help --debug --dry-run --confirm --ddebug)
+* default means for platform determination
 * finds sub-commands via a configurable search path (allows local overides)
 * finds config files via a configurable search path
 * reads a config file (to set environment vars) before running sub-commands
 * sub-commands may be written in any shell or language
+* sub-commands may have metadata for help
 * sub-commands can run as source, exec, or eval
-* help c_sub_cmd included provides:
-	* list of help topics - `groan help topics`
+* help included provides:
+	* list of help topics - `groan help topics` / `groan topics`
 	* list of commands and their usage - `groan help commands` / `groan commands`
 	* markdown viewer support
 	
 ## General Principles
 
-Groan c_sub_cmds are called after having:
+Groan (sub)commands are called after having:
 
 * processed and filtered out the standard set of flags.
     * --verbose -V
@@ -95,20 +85,27 @@ Groan c_sub_cmds are called after having:
     * --dry-run    # enabled by default
     * --confirm    # disables --dry-run flag for destructive operations
     * --ddebug -DD # developer debug
-* attempted to work out what platform it is running on. 
 * found and 'sourced' a config-file.
+* found and 'sourced' metadata (if separate).
 
 ## Config Files
 
-Groan looks for config files in a number of places. This is configured in `rename_me.locations.sh`
+Groan looks for config files in a number of places. This can be configured in `groan.locations.sh`
+
+```
+	"$g_working_dir/$c_name.conf"  # --local
+	"$HOME/.$c_name.conf"          # --user
+	"$c_dir/$c_name.conf"          # --global )
+```
 
 ## Sub-Commands
 
-...follow the convention `sub-commands/<c_sub_cmd>.sub.sh`
+...follow the convention `commands/<c_sub_cmd>.sub.sh`
 
-* `<name>.sub.sh` will source the c_sub_cmd
-* `<name>.sub.exec` will exec the c_sub_cmd
-* `<name>.sub.*` will eval the c_sub_cmd
+* `<name>.sub.sh` will directly source the shell file <name>.cmd.sh
+* `<name>.sub.exec` will exec the <name>.cmd.exec
+* `<name>.sub.su` will sudo the <name>.cmd.exec
+* `<name>.sub.*` will eval the <name>.cmd.*
 	* `<name>.sub.rb`
 	* `<name>.sub.fish` ...etc
 
@@ -155,7 +152,7 @@ A number of template conf files can be provided, the user can choose a file and 
         
 ### Subcommand - self-install
 
-    groan self-install /usr/local/bin --link --confirm
+    groan setup /usr/local/bin --link --confirm
 
 ### Subcommand - remote (provided by `sensible`)
 
@@ -177,15 +174,15 @@ sensible_install[atomic]='/home/keith/bin'
 sensible_tags[atomic]='server'
 ```
   
-  * Remote deploy via: `rename_me remote deploy --tag=test --install --confirm`
-  * Remote execute via: `rename_me remote exec --tag=all -- pwd`
-  * Remote undeploy via: `rename_me remote undeploy --tag=all --confirm`
+  * Remote deploy via: `groan remote deploy --tag=test --install --confirm`
+  * Remote execute via: `groan remote exec --tag=all -- pwd`
+  * Remote undeploy via: `groan remote undeploy --tag=all --confirm`
 
 ## Sub-command aliasing
 
-The script `groan/groan.commands/help.sub.helper.cmd._dispatch.sh` implements aliasing of one sub-command to another.
+The script `groan/commands/help.sub.helper.cmd._dispatch.sh` implements aliasing of one sub-command to another.
 If you copy this script and rename to `assistant.sub.helper.cmd._dispatch.sh` then the new `assistant` command
-will be handled by the enclosed `helper` command via `../helper/helper.commands/_dispatch.sh`.
+will be handled by the enclosed `helper` command via `../helper/commands/_dispatch.sh`.
 
 Aliasing can also be done, directly to another command e.g. `commands.sub.helper.cmd.commands.sub.sh`
 and within the same suite. e.g. `crumbs.sub..cmd.breadcrumbs.sub.sh`
