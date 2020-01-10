@@ -48,8 +48,8 @@ done
 
 if $UNLINK; then
     theInstalledLink="$(command -v "$g_name" || true)"
-    #echo "THEINSTALLEDLINK: $theInstalledLink ($g_name) [$PATH]"
-    if [[ -z "$theInstalledLink" ]]; then
+    echo "THEINSTALLEDLINK: $theInstalledLink ($g_name)   [$PATH]"
+    if [[ -z "$theInstalledLink" || "$theInstalledLink" == "$g_file" ]]; then
         echo "$g_name appears not to be installed"
         exit 1
     fi

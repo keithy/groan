@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 
 # The groan framework is implemented by a minimal set of scripts.
-# All top-level "commands" are exactly the same code but with differing names.
-# i.e. `rename-to-your-command-name` and `groan\groan` are identical.
 #
-# This "Command" script - Provides basic features and redirects `groan <cmd>` to `<cmd>.sub.sh`
+# 1) This "Command" script - provides universal features and passes to a command dispatcher
+# 2) commands/_dispatch.sh - selects and executes a given subcommand
+# 3) <name>.sub.<cmd>.<altname>.sub.sh - alias a command delegating to anothers sub-command.
+#
+# Shell commands may be sourced for two purposes, according to the METADATAONLY flag.
+# By convention, variables in CAPITALS direct/select workflow/actions
 
-# our contribution to help
+# Our default metadata contribution to help
 optionsLongForm=\
 "--help    | -h | -?  Usage help for a command
 --quiet   | -q       Quiet mode - say nothing
