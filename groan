@@ -79,9 +79,11 @@ function g_readLocations # from g_locations file
 
   markdownViewerUtility="mdv -t 715.1331"
 
-  # read 
+  # read our personal config file 
   g_locations_config="${c_file}.locations.sh"
-
+  # in preference to a hidden personal config file
+  [[ ! -f "$g_locations_config" ]] && g_locations_config=".${g_locations_config}"
+	
   if [ -f "$g_locations_config" ]; then 
     $DEBUG && echo "Locations< $g_locations_config"
     source "$g_locations_config"
