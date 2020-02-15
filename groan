@@ -71,7 +71,7 @@ function g_readLocations # from g_locations file
   
   g_locations=(
 	  "${c_dir}/commands"                
-	  "${c_dir}/topics"                  
+	  "${c_dir}/help"                  
   )
 
   g_default_subcommand="_default" #default

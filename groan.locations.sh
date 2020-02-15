@@ -12,7 +12,7 @@
 #	"$c_dir/$c_name.conf"          # --global )
 
 #g_config_preset_locations=( "$c_dir" )
-#g_locations=( "${c_dir}/commands" "${c_dir}/topics" )
+#g_locations=( "${c_dir}/commands" "${c_dir}/help" )
 #g_default_dispatch="_dispatch.sh"
 #g_default_subcommand="_default"
  
