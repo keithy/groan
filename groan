@@ -11,12 +11,12 @@
 
 # Our default metadata contribution to help
 optionsLongForm=\
-"--help    | -h | -?  Usage help for a command
---quiet   | -q       Quiet mode - say nothing
+"--help    | -H | -?  Usage help for a command
+--quiet   | -Q       Quiet mode - say nothing
 --verbose | -V       Verbose
 --debug   | -D       Debug - tell all
---dry-run            # default
---confirm            # not a dry run - perform action
+--dry-run | -N       # default
+--confirm | -Y       # not a dry run - perform action
 --theme=light        # select an alternate colour theme"
 
 commonOptionsLong=\
@@ -84,7 +84,8 @@ function g_readLocations # from g_locations file
   # in preference to a hidden personal config file
   [[ ! -f "$g_locations_config" ]] && g_locations_config=".${g_locations_config}"
 	
-  if [ -f "$g_locations_config" ]; then 
+  if [ -f make
+  "$g_locations_config" ]; then 
     $DEBUG && echo "Locations< $g_locations_config"
     source "$g_locations_config"
   else
@@ -104,6 +105,24 @@ function g_readConfig # from the first of the g_config_file_locations listed in 
                 break
         fi
     done
+}
+
+# linux macos(?)
+function parse_yaml {
+   local prefix=$2
+   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$'\034'
+   sed -ne "s|^\($s\):|\1|" \
+        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+   awk -F$fs '{
+      indent = length($1)/2;
+      vname[indent] = $2;
+      for (i in vname) {if (i > indent) {delete vname[i]}}
+      if (length($3) > 0) {
+         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+      }
+   }'
 }
 
 function g_readThemes # from 
@@ -132,7 +151,7 @@ function g_readThemes # from
 function g_executeScriptPath {
 
   s_path="$1"
-  local s_meta_path="${s_path/.sub.*/.meta.sh}"
+  local s_meta_path="${s_path/.sub.*/.conf}"
 
   local title="Running"
   $METADATAONLY && title="Metadata<"
@@ -264,25 +283,25 @@ do
             VERBOSE=true
             LOUD=true
       ;;
-      --help | -h | "-?")
+      --help | -H | "-?")
             SHOWHELP=true
             METADATAONLY=true
       ;;
-      --verbose | --v | -v | -V )
+      --verbose | --v | -V )
             DEBUG=false
             VERBOSE=true
             LOUD=true
        ;;
-      --quiet | -q)
+      --quiet | -Q)
             LOUD=false
             DEBUG=false
             VERBOSE=false
       ;;
-      --dry-run | -dry | --dry)
+      --dry-run | -N)
             DRYRUN=true
             CONFIRM=false
       ;;
-      --confirm)
+      --confirm| -Y)
             DRYRUN=false
             CONFIRM=true
       ;;
