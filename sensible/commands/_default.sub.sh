@@ -3,7 +3,7 @@
 # by Keithy 2019
 #
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="test"
 description="deploy and execute on remote servers"
@@ -11,7 +11,6 @@ usage=\
 "$breadcrumbs               # test ssh connections
 $breadcrumbs --help        # this message"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
  

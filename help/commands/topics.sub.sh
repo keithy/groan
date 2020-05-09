@@ -2,7 +2,7 @@
 #
 # by Keith Hodges 2019
 
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="$s_sub_cmd"
 description="list available topics"
@@ -10,7 +10,6 @@ description="list available topics"
 commonOptions="--theme=light    # alternate theme"
 usage="$breadcrumbs    # list topics"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 function list_topics()

@@ -2,15 +2,12 @@
 #
 # by Keithy 2019
 #
-
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition #tradition
 
 command="version"
-description="returns version tagged in git and the short hash"
-usage="usage:
-$breadcrumbs version"
+description="versions according to git"
+usage="$breadcrumbs"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 c_file_list=()

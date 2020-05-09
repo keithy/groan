@@ -2,22 +2,126 @@
 #
 # by Keith Hodges 2019
 
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="commands"
-description="list $c_name commands"
-#since help doesn't exec anything many common options don't apply
-commonOptions="--theme=light    # alternate theme"
-usage="$breadcrumbs    # list commands"
+description="list $c_name $command"
 
-$SHOWHELP && g_displayHelp
+#since help doesn't exec anything many common options don't apply
+options_common_vertical=\
+"
+--theme=0                        alternate theme
+--install                        install as bash alias
+--install=<name>                 install as bash alias <name>
+--install=<name> --config=<alt>  install with config <alt>
+--temp                           print the temp directory
+--which                          print the code directory
+"
+
+usage=\
+"
+$breadcrumbs                           list commands
+$breadcrumbs --install                  install as bash alias
+$breadcrumbs --install=other --C=other  install as bash alias with config
+"
+
 $METADATAONLY && return
+
+g_declare_options LIST INSTALL SHOW_TEMP SHOW_CODE
+
+LIST=true
+install_allowed=true
+install_as=""
+for arg in "$@"
+do
+    case "$arg" in
+      *)
+        LIST=false
+      ;;& 
+	  --install=*)
+            INSTALL=true
+			install_as=${arg#--install=}
+      ;;
+      --install)
+            INSTALL=true
+      ;;
+	  --temp)
+            SHOW_TEMP=true
+      ;;
+      --which)
+            SHOW_CODE=true	
+      ;;
+      *)
+        :
+      ;;
+    esac
+done
+
+if $SHOW_TEMP; then
+	echo "$g_tmp"
+	exit
+fi 
+
+if $SHOW_CODE; then
+	echo "$g_dir"
+	exit
+fi 
+
+if $INSTALL; then
+
+	tag="##:${install_as:-$g_name}:##"
+
+	function clean()
+	{
+		local file="$1" #1) dest file
+		{ \rm "$file" && grep -v "$tag" > "$file" ; } < "$file" || true
+	}
+
+	function append_to ()
+	{
+		local file="$1" #1) dest file
+		local line="$2" #2) line to add
+		touch "$file"
+		printf "%s %s\n" "$line" "$tag" >> "$file"
+	}
+
+	bashrc="${g_tmp}/bashrc"
+	touch "$HOME/.bashrc"
+	cp "$HOME/.bashrc" "$bashrc" || true
+
+	$DEBUG && echo "Before:" && cat "$bashrc"
+
+	clean "$bashrc"
+
+	$DEBUG && echo "Cleaned:" && cat "$bashrc" 
+
+	with_config=""
+	if [[ -n ${CONFIG+x} ]]; then
+		with_config=" -C=$CONFIG"
+	fi
+
+	if [[ "${install_as}" ]]; then
+	 	append_to "$bashrc" "alias ${install_as}='${g_file} ==g_name=${install_as}$with_config'"
+	else
+	 	append_to "$bashrc" "alias ${g_name}='${g_file}$with_config'"
+	fi
+
+	$LOUD && echo "installed alias ${bold}${install_as:-$g_name}${reset}"
+	$VERBOSE && echo "${dim}bashrc${reset}" && cat "$bashrc" || true
+	$CONFIRM && cp "$bashrc" "$HOME/.bashrc" || echo "DRY-RUN --confirm to apply"
+
+	$CONFIRM && source "$HOME/.bashrc"
+fi
+
+$LIST || exit
 
 c_file_list=()
 crumbsList=()
 
 # start search at this level, not the top level
 g_findCommands "$c_file" "$breadcrumbs" false
+
+(( bw = ${breadcrumbs_width:-20} + ${#breadcrumbs} ))
 
 function list_sub_cmds()
 {
@@ -29,21 +133,22 @@ function list_sub_cmds()
 	local cmds=()
 	for s_dir in "${g_locations[@]}"
 	do
-	for s_path in "$s_dir/${g_default_subcommand}.sub."*
-	do
-		cmds+=("$s_path")
-	done
+		for s_path in "$s_dir/${g_default_subcommand}.sub."*
+		do
+			cmds+=("$s_path")
+		done
 	done
 
 	# Display the default sub-command at the top of  the list (without its breadcrumb)
     for s_path in "${cmds[@]}"
 	  do
 		g_parseScriptPath "$s_path"
-		$DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
+		$DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})"
+
 		METADATAONLY=true
 		g_executeScriptPath "$s_path"  
 
-		printf "%-45s" "$crumbs"
+		printf "%-${bw}s" "$crumbs"
 		echo "$description"
 	  done
 
@@ -53,7 +158,6 @@ function list_sub_cmds()
 		for s_path in "$s_dir"/[^_]*.sub.*
 		do
 		  g_parseScriptPath "$s_path"
-
 		  $DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
 
 		  # commented out this if clause so as to include display of commands that go a level deeper
@@ -64,10 +168,11 @@ function list_sub_cmds()
 			crumbs="$2 $s_sub_cmd"
 
 			METADATAONLY=true
-			printf "%-45s" "$crumbs"
+			printf "%-${bw}s" "$crumbs"
 			g_executeScriptPath "$s_path"  
 
-			echo "$description"
+			echo "${description%%$'\n'*}" # first line
+			unset description
 		 # fi
 		done
 	done
@@ -86,7 +191,8 @@ fi
 i=0
 #for i in "${!c_file_list[@]}"; do
   displayName="${c_file_list[i]##*/}"
-  echo "${bold}${displayName/-/ } commands:${reset}"
+  #echo "${bold}${displayName/-/ } commands:${reset}"
+  echo "${bold}${g_dir##*/} commands:${reset}"
   
   list_sub_cmds "${c_file_list[i]}" "${crumbsList[i]}"
   

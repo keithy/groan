@@ -3,7 +3,7 @@
 # by Keith Hodges 2019
 #
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 command="new"
 description="create a new project/file structure from a template"
 options=\
@@ -36,7 +36,6 @@ do
    	done
 done
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

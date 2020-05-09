@@ -4,14 +4,13 @@
 #
 # A Dummy
 
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="test"
 description="dummy (test for duplication)"
 usage=\
 "$breadcrumbs test"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 echo "This is a placeholder"

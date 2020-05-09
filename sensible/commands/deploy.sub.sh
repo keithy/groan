@@ -3,7 +3,7 @@
 # by Keithy 2019
 #
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="deploy"
 description="deploy this command suite to remote hosts"
@@ -15,7 +15,6 @@ $breadcrumbs --install --confirm    # install symbolic link on path
 $breadcrumbs --remove --confirm     # undeploy
 $breadcrumbs --help                 # this message"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

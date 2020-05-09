@@ -4,7 +4,7 @@
 #
 # A Debugging tool
 
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="environment"
 description="show script/environment variables"
@@ -14,7 +14,6 @@ $breadcrumbs environment [--all|-a]
 $breadcrumbs environment [--eval "expr"] - evaluate expression in script context
 $breadcrumbs environment --help"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

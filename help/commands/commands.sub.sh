@@ -2,15 +2,18 @@
 #
 # by Keith Hodges 2019
 
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="commands"
 description="full list of commands"
 #since help doesn't exec anything many common options don't apply
-commonOptions="--theme=light    # alternate theme"
-usage="$breadcrumbs    # list commands"
+options_="--theme=light    # alternate theme"
 
-$SHOWHELP && g_displayHelp
+usage=\
+"
+$breadcrumbs    # list commands
+"
+
 $METADATAONLY && return
 
 function list_sub_cmds()
@@ -18,13 +21,15 @@ function list_sub_cmds()
   local c_file="$1"
   local crumbs="$2"
  
+  $DEBUG && echo "list_sub_cmds($c_file, $crumbs)"
+  
   g_readLocations "$c_file"
 
   for s_dir in ${g_locations[@]} ; do
 
 		# Display the default sub-command at the top of  the list (without its breadcrumb)
 		#if ! [[ "$g_default_subcommand" == _* ]] ; then    
-		 for s_path in $s_dir/${g_default_subcommand}.sub.*
+		 for s_path in $s_dir/${c_default_subcommand:-$g_default_subcommand}.sub.*
 		  do
 			g_parseScriptPath "$s_path"
 			$DEBUG && echo "Parsed[$s_path]: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
@@ -37,7 +42,9 @@ function list_sub_cmds()
 		#fi
  done
 
- local c_file="$1"
+local c_file="$1"
+
+ $DEBUG && echo "c_file: $c_file"
  g_readLocations "$c_file"
 	
  for s_dir in ${g_locations[@]} ; do

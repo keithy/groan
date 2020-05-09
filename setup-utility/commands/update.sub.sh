@@ -10,7 +10,6 @@ usage=\
 "$breadcrumbs                  # update tool data
 $breadcrumbs --code --confirm # update code"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

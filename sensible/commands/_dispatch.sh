@@ -21,6 +21,7 @@ function g_parseScriptPath()
   s_sub_cmd=""
   s_dest_cmd=""
   s_dest_subcmd_name=""
+  s_isDispatcher=false
 
   #we remove everything .sub. onwards to avoid getting false matches on .sub
   local scriptRoute="${s_name%%.cmd.*}" 
@@ -33,7 +34,7 @@ function g_parseScriptPath()
       s_dest_cmd="${scriptRoute#*sub.}"  # keep everything after first .sub.
       s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd:-$c_name}"
       s_dest_subcmd_name="${s_name#*.cmd.}"  # keep everything after .cmd.
-
+      [[ "$s_dest_subcmd_name" == *.sub.* ]] && s_isDispatcher=false || s_isDispatcher=true
     fi
   fi
 }
@@ -47,6 +48,7 @@ function g_findCommands()
 {
   local c_file="$1"
   local crumbs="$2"
+  $DEBUG && echo "g_findCommands($c_file, $crumbs)"
 
   c_file_list+=("$c_file")
   crumbsList+=("$crumbs")
@@ -63,9 +65,10 @@ function g_findCommands()
       g_parseScriptPath "$s_path"
 
       if [ -n "$s_sub_cmd" ]; then
-        if ! [[ "$s_dest_subcmd_name" == *.sub.* ]]; then #this c_sub_cmd invokes a g_dispatcher
-          crumbs="$2 $s_sub_cmd"
-          g_findCommands "$s_dest_path" "$crumbs"
+        #if ! [[ "$s_dest_subcmd_name" == *.sub.* ]]; then #this c_sub_cmd invokes a g_dispatcher
+          if $s_isDispatcher; then
+            crumbs="$2 $s_sub_cmd"
+            g_findCommands "$s_dest_path" "$crumbs"
         fi
       fi
     done
@@ -73,7 +76,7 @@ function g_findCommands()
 }
 
 #note $c_sub_cmd requested may be partial and $s_sub_cmd is the matched result
-[ -z "$c_sub_cmd" ] && c_sub_cmd="$g_default_subcommand"
+[[ -z "$c_sub_cmd" ]] && c_sub_cmd="${c_default_subcommand:-$g_default_subcommand}"
 
 target="${c_sub_cmd}*.sub.*"
 exact="${c_sub_cmd}.sub.*"
@@ -102,8 +105,9 @@ if [ ${#list[@]} -eq 1 ]; then #One script matches
   do
       [[ "$s_sub_cmd" == _* ]] || breadcrumbs="$breadcrumbs $s_sub_cmd"
       g_executeScriptPath "$s_path"
-      $SHOWHELP && exit
-      $METADATAONLY && return || exit 
+
+      $SHOWHELP && g_displayHelp && exit
+      $METADATAONLY && return 0 || exit 
   done
 fi
 

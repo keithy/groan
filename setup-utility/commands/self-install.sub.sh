@@ -10,7 +10,6 @@ usage="usage:
 $breadcrumbs self-install /usr/local/bin --link
 $breadcrumbs self-install --unlink"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

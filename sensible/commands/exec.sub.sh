@@ -3,7 +3,7 @@
 # by Keithy 2019
 #
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="deploy"
 description="execute commands on remote hosts"
@@ -12,7 +12,6 @@ usage=\
 $breadcrumbs --tags=<a>,<b>  # select tagged hosts to execute on
 $breadcrumbs --help          # this message"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"

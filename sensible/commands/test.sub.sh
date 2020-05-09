@@ -3,7 +3,7 @@
 # by Keithy 2019
 #
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 command="test"
 description="test remote connections via ssh"
@@ -11,7 +11,6 @@ usage=\
 "$breadcrumbs               # test ssh connections
 $breadcrumbs --help        # this message"
 
-$SHOWHELP && g_displayHelp
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"
@@ -40,7 +39,7 @@ do
     ;;
     # ? in this context is a single letter wildcard 
     ?*) 
-        configureName="$arg"
+        configure_name="$arg"
     ;;
   esac
 done

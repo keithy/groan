@@ -2,7 +2,7 @@
 #
 # by Keith Hodges 2010
 #
-$DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
+me "$BASH_SOURCE" #tradition
 
 # General Help On Commands
 
@@ -11,12 +11,14 @@ $DEBUG && echo "${dim}${BASH_SOURCE}${reset}"
 command="default"
 description="show topical help"
 #since help doesn't exec anything many common options don't apply
-commonOptions="--theme=light    # alternate theme"
-usage="$breadcrumbs <command|topic>
-$breadcrumbs commands
-$breadcrumbs --help    # this text"
 
-$SHOWHELP && g_displayHelp
+usage=\
+"
+${breadcrumbs} <command|topic>
+${breadcrumbs} commands
+${breadcrumbs} --help    # this text
+"
+
 $METADATAONLY && return
 
 $DEBUG && echo "Command: '$command'"
