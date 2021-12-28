@@ -1,30 +1,23 @@
 #!/usr/bin/env bash
 ##############################################################
-# The groan framework is implemented by three scripts.
-#
-# 1) This "Command" script 
-#    - provides universal features and passes to a dispatcher
-# 2) commands/_dispatch.sh
-#    - selects and executes a given sub-command
-# 3) <name>.sub.<cmd>.cmd.<altname>.sub.sh 
-#    - alias a command delegating to anothers sub-command.
+# The groan framework is implemented by this one script.
 #
 # Shell sub-commands may be sourced for two purposes, 
 # selected by the METADATAONLY flag.
-#
 
 ##############################################################
 # Default metadata - our contribution to help
-#
 
-options_common_vertical="
---help            | -H   usage help for a command
---quiet           | -Q   quiet mode - say nothing
---verbose         | -V   verbose
---debug           | -D   debug - tell all
---dry-run         | -N
---confirm         | -Y   not a dry run - perform action
---config=<choice> | -C=  select alternative configuration
+options_common_vertical=\
+"
+--help    | -H | -?       usage help for a command
+--quiet   | -Q            quiet mode - say nothing
+--verbose | -V            verbose
+--debug   | -D            Debug - tell all
+--dry-run | -N
+--confirm | -Y            not a dry run - perform action
+--theme=light             select an alternate colour theme
+--config=<choice> | -C=   select alternative config
 "
 
 options_common_horizontal=\
@@ -33,27 +26,25 @@ options_common_horizontal=\
  -H     -Q      -V        -D
 "
 
-description_=""
 options_=""
-usage_=""
 
 ##############################################################
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 # Unofficial "Bash Strict Mode"
-#
+
 set -euo pipefail
 IFS=$'\n\t'
 shopt -s nullglob # make sure globs are empty arrays if nothing is found
-shopt -s globstar
 set -o allexport
 NL=$'\n' # Just useful
 
 ##############################################################
 # Everyfile in the toolset traditionally calls this function
 #
+
 function me() #BASH_SOURCE
 {
-  $DEBUG && printf "\e[2m${1}\e[0m\n"
+  $GDEBUG && printf "\e[2m${1}\e[0m\n"
   my_source=$(realpath "${1}")
   my_name="${my_source##*/}"
   my_dir="${my_source%/*}"
@@ -61,25 +52,25 @@ function me() #BASH_SOURCE
 
 function my_name()
 {
-  echo $g_tool_context_name
+  g_echo $g_tool_context_name
 }
  
 ##############################################################
 # A standard means for platform differentiation
-g_PLATFORM="${BASH_VERSINFO[5]}"
+# Use ${OSTYPE}
 
 ##############################################################
 # Utility to ensure that sudo is available
-#
+
 function g_needsSudo() {
     local prompt
     prompt=$(sudo -nv 2>&1)
     if [ $? -eq 0 ]; then
-       $DEBUG && echo "User has 'sudo' access."
-    elif echo "$prompt" | grep -q '^sudo:'; then
-       $DEBUG && echo "User has sudo (password required)"
+       $GDEBUG && g_echo "User has 'sudo' access."
+    elif g_echo "$prompt" | grep -q '^sudo:'; then
+       $GDEBUG && g_echo "User has sudo (password required)"
     else
-       echo "this action requires 'sudo' access."
+       g_echo "this action requires 'sudo' access."
        exit 1
     fi
 }
@@ -90,21 +81,37 @@ function g_readDefaults()
 { 
   local c_dir="${1}"
   g_tmp=/tmp # TempDir for Linux ... or Windows
-  [[ "$g_PLATFORM" == *pc-msys ]] && g_tmp="$HOME/AppData/Local/Temp"
+  #git bash has /tmp
+  #[[ "$OSTYPE" == msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
 
-  # config locations 
-  g_config_options=("local" "user" "context" "global")
+  case $THEME in
+      none | off | 0)
+          bold=$''           
+          dim=$''            
+          italic=$''
+          underline=$''
+          reversed=$''
+          reset=$''
+      ;;
+      *)
+          bold=$'\e[1m'      # Style Bold
+          dim=$'\e[2m'       # Style Dim
+          italic=$'\e[3m'    # Style Italic
+          underline=$'\e[4m' # underline
+          reversed=$'\e[7m'  # reversed
+          reset=$'\e[0m'     # Reset
+      ;;
+  esac
+
+  g_config_file_options=("local" "user" "context" "global")
   g_config_file_locations=(
-    "$(pwd)"  	             # --local
-    "$HOME/.config/$g_name" # --user
-    "${c_dir}/../config"    # --context
-    "${c_dir}/config"  	  # --global
+    "$(pwd)"  	           # --local
+    "$HOME/.config"        # --user
+    "${c_dir}/../config"   # --context
+    "${c_dir}/config"  	   # --global # installed in the code/config dir
   )
 
-  g_default_subcommand="_default" #default
-  g_default_dispatch="_dispatch.sh"
-
-  CONFIG=${CONFIG:-default}
+  g_default_command="_default"
 
   markdownViewerUtility="mdv -t 715.1331" # miscellaneous
 }
@@ -113,44 +120,60 @@ function g_readDefaults()
 # Locations are the top level configuration for an executable
 # they set where to find everything else, including config
 # defaults are set here, and each executable may have a
-# <exe>.conf or a hidden .<exe>.conf
+# <exe>.conf (or perhaps a hidden .<exe>.conf)
 #
-function g_readLocations # from g_locations conf file
+# The first layer is "code defined" in the code below
+# The second layer is "code defined" in the config dir, via the commands own name
+# The third layer is "context defined", via the containing directory name
+#   So - when the same code is used in a different context (containing directory),
+#   values can be overridden using that context name.
+
+function g_setContext # from conf files
 {
   #c_dir c_name globals used within <name>.conf file
   c_file="$1"
   c_dir=$(dirname "$c_file")
+  c_dirname="${c_dir##*/}"
   c_name="${c_file##*/}" # `basename $c_file`
 
   g_locations=(
-	  "${c_dir}/commands"                
+	  "${c_dir}/${2:-commands}"                
 	  "${c_dir}/help"                  
+	  "${c_dir}" 
   )
   
-  # If present read our personal locations file 
-  g_find_ "Locations" "${c_name}.conf" "${c_dir}" && source "$g_found"
+  g_types=( cmd red wip obsolete )
+
+  # If our context has a different name look for our configuration in these locations
+  [[ "$c_name" != "$c_dirname" ]] && \
+    g_find "Locations1" "${c_name}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
+  
+  # Look for our context defined configuration in these locations
+    g_find "Locations2" "${c_dirname}.conf" "${g_config_file_locations[@]}" && source "$g_found"
+    
   # in preference to a hidden personal locations file
-  g_find_ "Locations" ".${c_name}.conf" "${c_dir}" && source "$g_found"
+  # g_find "Locations" ".${c_name}.conf" "${c_dir}" && source "$g_found"
 
   return 0
 }
 
 ##############################################################
-# search g_config_file_locations set in g_readLocations
-# find a <filename>
-#
-function g_find_ () #1) type_string #2) filename #) dirs to look
+# search locations for a <filename>
+
+function g_find () #1) log message type #2) filename needle #) haystack dirs
 {
   local dir file type="${1}" name="${2}" ; shift ; shift
-  local -a places=("$@")
-	for dir in "${places[@]:-${g_config_file_locations[@]}}"
+	for dir in "$@"
     do
        g_found="${dir}/${name}"
+       dir="${dir/$PWD/\$PWD}"
+       dir="${dir/${g_dir}/\$g_dir}"
+       dir="${dir/$HOME/\$HOME}"
        if [[ -f "${g_found}" ]]; then
-          $DEBUG && echo "${type}< ${g_found}"
+          $GDEBUG && g_echo "${type}< ${dir}/${name}"
           return 0
        fi
-       $DEBUG && echo "${type}? ${g_found}"
+       $GDEBUG && g_echo "${type}? ${dir}/${name}"
     done
     return 1 # no file found
 }
@@ -160,7 +183,8 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
 function define(){ IFS='\n' read -r -d '' ${1} || true; }
 
 ##############################################################
-# on the tin
+# rudimentary parse_yaml
+
 function parse_yaml {
    local prefix=$2
    local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$'\034'
@@ -180,53 +204,90 @@ function parse_yaml {
 
 ##############################################################
 #
-function g_executeScriptPath {
+function g_executeScriptPath ()
+{
+  local bk=("${g_locations[@]}") 
+  _g_executeScriptPath "$@"
+  g_locations=("${bk[@]}") 
+}
 
+function _g_executeScriptPath ()
+{  
   s_path="$1"
-  local s_meta_path="${s_path/.sub.*/.conf}"
-
-  local meta_complete title="Running"
-  $METADATAONLY && title="Metadata<"
-
-  if [[ -f "$s_meta_path" ]]; then
-        $DEBUG && echo "Metadata< $s_meta_path"
-        source "$s_meta_path" "${args[@]:+${args[@]}}" && meta_complete=true || meta_complete=false
-        $METADATAONLY && $meta_complete && return 0
-  fi
+  local meta_complete
 
   # When set -u is enabled bash<=4.1, this pattern
-  # is needed: "${args[@]:+${args[@]}}" 
-  
+  # is needed: "${args[@]:+${args[@]}}"
+
+  local status
+  $METADATAONLY && status="Metadata" || status="Running"
+
   case "${s_path##*.}" in
+    conf)
+        $GDEBUG && g_echo "$status< $s_path"
+        g_sourceScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" && meta_complete=true || meta_complete=false
+        $METADATAONLY && $meta_complete && return 0
+
+        s_name=${s_name/.*.conf/}
+        $GDEBUG && g_echo "Locations: ${g_locations[@]:+${g_locations[@]}}" 
+            
+        for s_dir in "${g_locations[@]}"
+        do
+          $GDEBUG && g_echo "Looking for script ${s_name} or ${s_name}.* in ${s_dir}"
+          for script in "${s_dir}/${s_name}" "${s_dir}/${s_name}".*
+          do
+            if [[ "$script" != "$s_path" ]] && [[ -f "$script" ]]; then
+            
+              g_executeScriptPath "$script" "${args[@]:+${args[@]}}"
+
+              # $SHOWHELP && g_displayHelp && exit  # moved to post dispatch
+              $METADATAONLY || exit
+
+              return 0
+            fi
+          done
+        done
+    ;;
     sh)
-        $DEBUG && echo "$title source> $s_path ${args[@]:+${args[@]}}"
-        
+        $GDEBUG && g_echo "$status source> $s_path ${args[@]:+${args[@]}}"        
+  
         $XDEBUG && set -x
-        g_sourceScriptMappingArgs "${args[@]:+${args[@]}}"
+        g_sourceScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}"
         if $XDEBUG; then set +x; fi #short && form does not agree with a following return
-        return
     ;;
     exec)
-        $DEBUG && echo "$title exec> $s_path ${args[@]:+${args[@]}}"
+        $GDEBUG && g_echo "$status exec> $s_path ${args[@]:+${args[@]}}"
         exec "$s_path" "${args[@]:+${args[@]}}"
-        return
     ;;
     ps1)
-        $DEBUG && echo "$title exec> $s_path ${args[@]:+${args[@]}}"
+        $GDEBUG && g_echo "$status exec> $s_path ${args[@]:+${args[@]}}"
         exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$s_path" "${args[@]:+${args[@]}}"
-        return
     ;; 
     su)
-        $DEBUG && echo "$title exec> $s_path ${args[@]:+${args[@]}}"
+        $GDEBUG && g_echo "$status sudo> $s_path ${args[@]:+${args[@]}}"
         sudo "$s_path" "${args[@]:+${args[@]}}"
-        return
     ;;
     *)
-        $DEBUG && echo "$title eval> $s_path ${args[@]:+${args[@]}}"
+        $GDEBUG && g_echo "$status eval> $s_path ${args[@]:+${args[@]}}"
         eval "$s_path" "${args[@]:+${args[@]}}"
         exit 0
     ;;
   esac
+
+}
+
+# A destructor to clear down variables that would otherwise
+# have side effects when collecting metadata in command lists.
+function _g_unsetMetadata
+{
+  unset wip
+  unset description
+}
+
+# other commands can redefine this to add additional fields to unset
+function g_unsetMetadata
+{
+  _g_unsetMetadata
 }
 
 ##############################################################
@@ -234,53 +295,147 @@ function g_executeScriptPath {
 # so that args are automatically mapped in to $@
 function g_sourceScriptMappingArgs
 {
-    source "$s_path"
+	local source="$1"
+	shift
+  source "$source"
 }
 
 ##############################################################
+# If a Command description is defined
+
+function _print_command_description()
+{
+  printf "${bold}${c_description:-}${reset}"
+}
+
+function print_command_description()
+{
+  _print_command_description
+  printf "${c_description+\n\n}" # if the description is defined
+}
+
+##################################################################
+# Sub-Command Help is in three parts: description, options, usage
 #
-# If description is not defined - no help is displayed.
-#
-# Help is in three parts: description, options, usage
 # Each has a main and supplementary
 #   - $description and $description_
 #   - $options     and $options_
 #   - $usage       and $usage_
 #
 # Description - is displayed with the first line in bold
-# Options - section titled in bold 'options:'
-# Usage   - section titled in bold 'usage:'
+# Options     - section titled in bold 'options:'
+# Usage       - section titled in bold 'usage:'
 # 
-function g_displayHelp {
+options=""; options_=""; usage=""; usage_=""
 
-  [[ -z ${description+x} ]] && echo "command description is missing" && return 1
+function g_displayHelp {
+  print_description; print_options; print_usage
+}
+
+function _print_description()
+{
+  [[ -z ${description+x} ]] && g_echo "sub-command description is missing" && return 1
 
   local desc="$description${NL}"
-  local title="${desc%%$'\n'*}" # first line
 
-  printf "${bold}%s${reset}\n%s\n" "${title}" "${desc#*$'\n'}"
-  [[ -n ${description_} ]] && printf "$description_\n\n"
+  printf "${bold}"
+  _print_description_first_line
+  printf "${reset}${desc#*$'\n'}"
+}
 
-  if [[ -z ${options+x} ]]; then
+function print_description()
+{
+  _print_description
+  printf "${description+\n\n}"
+}
+
+function _print_description_first_line()
+{
+    local desc="${description:-no metadata}"
+    printf "${description_first_line:-${desc%%$'\n'*}}"
+}
+
+function print_command_list_description()
+{
+  printf $(_print_description_first_line)
+}
+
+function _print_options ()
+{
+  if [[ -z "${options}" ]]; then
     printf "${bold}options:${reset}%s" "${options_common_vertical}"
   else
     printf "${bold}options:${reset}%s%s" "${options_common_horizontal}" "$options"  
   fi
-  [[ -n ${options_+x} ]] && printf "%s" "${options_#*$'\n'}"
-  
+  [[ -n ${options_+x} ]] && echo "${options_#*$'\n'}"
+
+  return
+}
+
+function print_options ()
+{
+  _print_options
+}
+
+function _print_usage()
+{
   printf "\n${bold}usage:${reset}${usage}"
-  [[ -n ${usage_} ]] && printf "${usage_}"
-  
+}
+
+function print_usage()
+{
+  _print_usage
+  [[ -n ${usage_+x} ]] && printf "${usage_}"
   return 0
 }
 
-g_option_vars=()
-function g_declare_options ()
+function print_kv()
 {
-  g_option_vars+=( "$@" )
-  for var in "$@"; do
-    declare -g $var=false
-  done
+  $LOUD && echo "${bold}${1}:${reset} ${2:-}${2:+ }${dim}${3:-}${reset}" || echo "${2:-}"
+}
+
+function g_echo() {
+  >&2 echo "$@" # or { printf "%s\n" "$*" >&2; }
+}
+
+# loads a help variable
+# e.g. g_help options_ "--status" "ping the server"
+
+function g_help()
+{
+  [[ -n ${3+x} ]] \
+   && printf -v "$1" "%s%-${g_width:27}s%s\n" "${!1}" "$2" "$3" \
+   || printf -v "$1" "%s%s\n" "${!1}" "$2"
+  return 0
+}
+
+##############################################################
+# self-install
+
+function g_bashrc_install ()
+{
+	local tag="##:${1}:##" #1) tag
+  local dest="$2"  #2) dest file - "$HOME/.bashrc"
+  local line="$3"  #3) line to add
+  local wipfile="${g_tmp}/${2////-}"
+
+  # backup
+	touch "$dest" 
+	cp "$dest" "$wipfile" || true
+
+	$GDEBUG && g_echo "Before:" && cat "$wipfile"
+
+	# clean one liner
+	{ \rm "$wipfile" && grep -v "$tag" > "$wipfile" ; } < "$wipfile" || true
+
+	$GDEBUG && g_echo "Cleaned:" && cat "$wipfile" && echo
+
+  # append
+	touch "$wipfile"
+	printf "%s %s\n" "$line" "$tag" >> "$wipfile"
+
+  $VERBOSE && g_echo "${dim}New bashrc:${reset}" && cat "$wipfile" || true
+	$CONFIRM && cp "$wipfile" "$dest" || g_echo "DRY-RUN --confirm to apply"
 }
 
 ##############################################################
@@ -293,7 +448,6 @@ g_join_into() {
     shift 3 || shift $(($#))
     printf -v "$retname" "%s" "$ret${@/#/$sep}"
 }
-
 
 ##############################################################
 #
@@ -311,9 +465,9 @@ function g_on_EXIT_ ()
   declare -F | awk 'sub(/.*g_on_EXIT_/,"")' | xargs printf "%s, "  
 }
 
-function g_on_EXIT_groan ()
+function g_on_EXIT_where ()
 {
-  env | grep -E "^[a-z]_"
+    env | grep -E "^my_"
 }
 
 function g_on_EXIT_options ()
@@ -323,21 +477,27 @@ function g_on_EXIT_options ()
   env | grep -E "^($vars)"
 }
 
-function g_on_EXIT_my ()
+function g_on_EXIT_groan ()
 {
-    env | grep -E "^my_"
+  env | grep -E "^[a-z]_"
 }
 
 function g_on_EXIT_env ()
 {
-    env
+    # fix unhelpful colour changes
+    env | sed "s/$/${reset}/"
+}
+
+function g_on_EXIT_var ()
+{
+    g_echo "${!show_me_variable}"
 }
 
 ##############################################################
 #
 function g_view { # Check for Markdown Viewer other wise cat
     if [[ -z $(command -v "${g_markdown_viewer%% *}") ]]; then
-	    $DEBUG && echo "Markdown viewer: $g_markdown_viewer"
+	    $GDEBUG && g_echo "Markdown viewer: $g_markdown_viewer"
     
 		"${g_markdown_viewer%% *}" "${g_markdown_viewer#* }" "$1"
     else
@@ -348,120 +508,452 @@ function g_view { # Check for Markdown Viewer other wise cat
 ##############################################################
 # Should simply be ${args[@]:1} but bash begs to differ:
 #
-function g_shiftArgsIntoNext {
-    next=""
-    local params=()
-    local arg
-
-    if [[ "${#args[@]}" -gt 0 ]]; then
+function g_shiftArgsIntoSubCmd
+{
+    c_cmd_arg=""
+    local arg params=()
+    if [[ "${#args[@]}" -gt 0  ]]; then
             for arg in "${args[@]}"
             do 
-                    if [ -z "$next" ]; then
-                            next="$arg"
+                    if [[ -z "$c_cmd_arg" ]] && [[ "${arg:0:1}" != "-" ]]; then
+                            c_cmd_arg="$arg"                           
                     else
                             params+=("$arg")
                     fi  
             done
     fi
     args=("${params[@]:+${params[@]}}")
+    [[ -n "${c_cmd_arg}" ]]
 }
- 
+
+function g_parseScriptPath()
+{
+  s_path="$1"
+  s_name="${s_path##*/}"
+  s_dir="${s_path%/*}"
+  s_cmd=""
+  s_dest_sub=""
+  s_dest_subcmd_name=""
+  s_isDispatcher=false
+
+  #we remove everything .sub. onwards to avoid getting false matches on .cmd
+  local scriptRoute="${s_name%%.sub.*}" 
+
+  for s_type in "${g_types[@]}"
+  do
+    if [[ "$scriptRoute" =~ \.${s_type}\. ]]; then #a c_cmd_arg is defined
+
+      if [[ -f "$s_path" ]]; then
+        s_cmd="${scriptRoute%%.${s_type}.*}" # everything before the first .cmd
+        s_dest_sub="${scriptRoute#*${s_type}.}"  # keep everything after first .cmd.
+        s_dest_path="${s_dir%/*}/${s_dest_sub}/${s_dest_sub:-$c_name}"
+        s_dest_subcmd_name="${s_name#*.sub.}"  # keep everything after .sub.
+        [[ "$s_dest_subcmd_name" == *.${s_type}.* ]] && s_isDispatcher=false || s_isDispatcher=true
+      fi
+
+      break
+    fi
+  done
+
+  $GDEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_cmd:-no subcommand})" 
+  :
+}
+
+# Recursively scan the c_cmd_args for those that call the g_dispatcher of a contained command
+# g_findCommands populates two arrays
+# c_file_list= each element is a sub-command file (e.g. helper)
+# breadcrumbs_list= each element is a list of c_cmd_args that reaches the above command
+
+function g_findCommands()
+{
+  local c_file="$1"
+  local crumbs="$2"
+  
+  $GDEBUG && printf "CMD: %s %s\n" "${crumbs}" "${c_file}"
+  $GDEBUG && g_echo "Command: ${dim}${c_dir}${reset}/${bold}${c_name}${reset} ${c_cmd_arg} ${args[@]:+${args[@]}}" 
+
+  c_file_list+=("$c_file")
+  crumbs_list+=("$crumbs")
+
+  local s_dir
+  local s_path
+
+  g_setContext "$c_file"
+
+  for s_type in "${g_types[@]}"
+  do
+    for s_dir in "${g_locations[@]}"
+    do
+      for s_path in "$s_dir"/*.${s_type}.*.sub.*
+      do
+        g_parseScriptPath "$s_path"
+
+        if [ -n "$s_cmd" ]; then
+          #if ! [[ "$s_dest_subcmd_name" == *.${s_type}.* ]]; then #this c_cmd_arg invokes a g_dispatcher
+            if $s_isDispatcher; then
+              crumbs="$2 $s_cmd"
+              g_findCommands "$s_dest_path" "$crumbs"
+            fi
+        fi
+      done
+    done
+  done
+}
+
+function g_dispatch ()
+{
+  # note $c_cmd_arg requested may be partial and $s_cmd is the matched result
+  c_cmd_arg="${1}"
+
+  for s_type in "${g_types[@]}"
+  do
+
+    target="${c_cmd_arg}*.${s_type}.*"
+    exact="${c_cmd_arg}.${s_type}.*"
+
+    for s_dir in "${g_locations[@]}"
+    do
+      $GDEBUG && g_echo "Looking for $target in: $s_dir"
+
+      # if an exact match is available
+      for s_path in "$s_dir"/$exact
+      do
+        target=$exact # upgrade the target to prioritize the exact match
+      done
+
+      list=()
+      for s_path in "$s_dir"/$target
+      do
+        g_parseScriptPath "$s_path"
+
+        if [ -n "$s_cmd" ]; then
+          list+=("$s_cmd")
+          $GDEBUG && g_echo "Found #${#list[@]} : $s_path"
+        fi
+      done
+
+      if [ ${#list[@]} -eq 1 ]; then # one script matches
+        for s_path in "$s_dir"/$target
+        do
+          [[ "$s_cmd" == _* ]] || breadcrumbs="$breadcrumbs $s_cmd"
+
+          g_unsetMetadata
+          g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
+
+          $SHOWHELP && g_displayHelp && exit
+          $METADATAONLY && return 0 || exit 
+        done
+      fi
+    done
+  done
+
+  if [ ${#list[@]} -gt 1 ]; then
+    $LOUD && echo "Multiple options exist for requested '${c_cmd_arg}' (${list[@]})"
+    exit 1
+  fi
+
+  $METADATAONLY && return 0
+  
+  $LOUD && g_echo "Not Found: $breadcrumbs ${bold}$c_cmd_arg${reset}"
+  exit 1
+}
+
+function g_listCmds()
+{
+	local c_file="$1"
+	local crumbs="$2"
+
+	g_setContext "$c_file"
+
+	# Display the default sub-command at the top of  the list (without its breadcrumb)
+
+	local subs=()
+
+  for s_type in "${g_types[@]}"
+  do
+    for s_dir in "${g_locations[@]}"
+    do
+      for s_path in "$s_dir/${g_default_command}.${s_type}."*
+      do
+        subs+=("$s_path")
+      done
+    done
+  done
+
+  for s_path in "${subs[@]}"
+  do
+    g_parseScriptPath "$s_path"
+
+    g_unsetMetadata
+    METADATAONLY=true g_executeScriptPath "$s_path"  
+
+    printf "%-${bw}s" "$crumbs"
+    echo "$description"
+  done
+
+  for s_type in "${g_types[@]}"
+  do
+
+    for s_dir in "${g_locations[@]}" ; do
+
+      #Display the c_cmd_args (with breadcrumb)
+      for s_path in "$s_dir"/[^_]*.${s_type}.*
+      do
+        g_parseScriptPath "$s_path"
+    
+        # commented out this if clause so as to include display of commands that go a level deeper
+        # these would not normally be included in the full recursive list of commands
+    
+        #if [[ -n "$s_cmd" ]] && [[ "$s_dest_subcmd_name" == *.${s_type}.* ]]; then
+  
+        if $VERBOSE || [[ "$s_type" == "${g_types[0]}" ]]; then
+
+          crumbs="$2 $s_cmd"
+
+          g_unsetMetadata
+          METADATAONLY=true g_executeScriptPath "$s_path"
+
+          printf "%-${bw}s" "$crumbs"
+
+          print_command_list_description
+
+          [[ "$s_type" != "${g_types[0]}" ]] && printf " ($s_type)"
+
+          echo
+
+        fi
+
+      done
+    done
+  done
+}
+
+##############################################################
+# Options pattern util
+
+g_option_vars=()
+function g_declare_options ()
+{
+  g_option_vars+=( "$@" )
+  for var in "$@"; do
+    declare -g "$var"="false"
+  done
+}
+
+function g_default ()
+{
+  description="list $c_name commands"
+
+  # since help doesn't exec anything many common options don't apply
+  options_common_vertical=\
+"
+--theme=0                        alternate theme
+--install                        install as bash alias
+--install=<name>                 install as bash alias <name>
+--install=<name> --config=<alt>  install with config <alt>
+--temp                           print the temp directory
+--which                          print the code directory
+"
+
+  usage=\
+"
+$breadcrumbs                        list commands
+$breadcrumbs --install              install as bash alias
+$breadcrumbs --install=dtt --C=dtt  install as bash alias with config
+"
+
+  $METADATAONLY && return 0
+
+  g_declare_options LIST SHOW_TEMP SHOW_EXE INSTALL
+
+  LIST=true
+  install_as=""
+
+  for arg in "${args[@]:+${args[@]}}"
+  do
+    case "$arg" in
+      *)
+        LIST=false
+      ;;&
+      --install=*)
+        INSTALL=true
+      install_as=${arg#--install=}
+      ;;
+      --install)
+        INSTALL=true
+      ;;
+      --temp)
+        SHOW_TEMP=true
+      ;;
+      --which)
+        SHOW_EXE=true
+      ;;
+      *)
+        :
+      ;;
+    esac
+  done
+
+  if $SHOW_TEMP; then
+    echo "$g_tmp"
+    exit
+  fi 
+
+  if $SHOW_EXE; then
+    echo "$g_file"
+    exit
+  fi 
+
+  if $INSTALL; then
+
+    with_config=""
+    if [[ -n ${CONFIG+x} ]]; then
+      with_config=" -C=$CONFIG"
+    fi
+
+    if [[ -n "${install_as}" ]]; then
+        g_bashrc_install "${install_as}" "$HOME/.bashrc" "alias ${install_as}='${g_file} ==g_name=${install_as}$with_config'"
+    else
+        g_bashrc_install "$g_name" "$HOME/.bashrc" "alias ${g_name}='${g_file}$with_config'"
+    fi
+
+    $CONFIRM && echo "To use the installed feature - start a new bash"
+    :
+  fi
+
+  $LIST || exit
+
+  # Display Command Description
+
+  print_command_description
+
+  # Display List
+
+  bw=${breadcrumbs_width:-25}
+  c_file_list=()
+  crumbs_list=()
+
+  # start search at this level, not the top level
+  g_findCommands "$c_file" "$breadcrumbs" false
+  
+  if $GDEBUG; then # print out results of recursive search
+    echo
+    for i in "${!c_file_list[@]}"; do    
+        printf "(%d) %-30s" "$i" "${crumbs_list[i]}"
+        echo "${c_file_list[i]}"
+    done
+    echo
+  fi
+
+  # only display our direct c_cmd_args (no need to loop)
+  i=0
+  #for i in "${!c_file_list[@]}"; do
+    displayName="${c_file_list[i]##*/}"
+    #echo "${bold}${displayName/-/ } commands:${reset}"
+    echo "${bold}${g_dir##*/} commands:${reset}"
+    
+    g_listCmds "${c_file_list[i]}" "${crumbs_list[i]}"
+    
+    echo
+  #done
+  
+  exit 0
+}
+
 ##############################################################
 # Parsing options the groan way - first initialize all flags
 #
 g_declare_options METADATAONLY SHOWHELP CONFIRM DRYRUN THEME
 
 DRYRUN=true
-THEME=default
+THEME="${THEME:-default}"
 
 ##############################################################
 # Debug verbosity levels
+# DEBUG  - User level Debug (for non-groan code)
+# DDEBUG - Developer level "Deep" Debug (for non-groan code)
+# GDEBUG - Debug (for groan code)
 # XDEBUG - Bash shell debugging using set -x
-# DDEBUG - Developer Debug (for non-groan code)
-# DEBUG -  Debug (for groan code)
-g_declare_options XDEBUG DDEBUG DEBUG VERBOSE ENVIRONMENT LOUD
+g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT LOUD
 LOUD=true
 
 ##############################################################
 # Top level - universal options processing pattern
 #
 args=()
-c_sub_cmd=""
 for arg in "$@"
 do
+    shift # needed for the -- option
     case "$arg" in
       -- )
-        args+=( "$@" )
+        args+=( '--' "$@" )
         break
       ;;
       ==*=*)
         arg="${arg#==}"
         declare "${arg%%=*}"="${arg#*=}"
       ;;
-      -DD|--ddebug)
-            DDEBUG=true
+      ==*)
+        show_me_variable="${arg#==}"
       ;;
-      -XX | --set-x-enable)
-            XDEBUG=true
+      -DD|--ddebug)
+        DDEBUG=true
+      ;;
+      -GD|--groan-debug)
+        GDEBUG=true
+        DEBUG=true
+        VERBOSE=true
+        LOUD=true
+      ;;
+      -XX)
+        XDEBUG=true
       ;;
       --debug | -D)
-            DEBUG=true
-            VERBOSE=true
-            LOUD=true
+        DEBUG=true
+        VERBOSE=true
+        LOUD=true
       ;;
       --help | -H | "-?")
-            SHOWHELP=true
-            METADATAONLY=true
+        SHOWHELP=true
+        METADATAONLY=true
       ;;
       --verbose | -V )
-            DEBUG=false
-            VERBOSE=true
-            LOUD=true
-       ;;
+        GDEBUG=false
+        DEBUG=false
+        VERBOSE=true
+        LOUD=true
+      ;;
       -EXIT=* )
-            trap "g_on_EXIT_${arg#-EXIT=}" EXIT
+        trap "g_on_EXIT_${arg#-EXIT=}" EXIT
       ;;
       --quiet | -Q)
-            LOUD=false
-            DEBUG=false
-            VERBOSE=false
+        LOUD=false
+        GDEBUG=false
+        VERBOSE=false
       ;;
       --dry-run | -N)
-            DRYRUN=true
-            CONFIRM=false
+        DRYRUN=true
+        CONFIRM=false
       ;;
       --confirm| -Y)
-            DRYRUN=false
-            CONFIRM=true
+        DRYRUN=false
+        CONFIRM=true
       ;;
       --config=*)
-            CONFIG="${arg##--config=}"
-            CONFIG="${CONFIG%.conf}"
+        CONFIG="${arg##--config=}"
       ;;
       -C=*)
-            CONFIG="${arg##-C=}"
+        CONFIG="${arg##-C=}"
       ;;
       --theme=*)
-            THEME="${arg##--theme=}"
-      ;;
-      --*)
-        args+=("$arg")
+        THEME="${arg##--theme=}"
       ;;
       *)
-          if [[ -z "$c_sub_cmd" ]]; then
-             c_sub_cmd="$arg"
-          else
-             args+=("$arg")
-          fi
+        args+=("$arg")
       ;;
     esac
 done
  
-$VERBOSE && options_="
---ddebug          | -DD  developers debug switch
---set-x-enable    | -XX  enable bash debug trace
-"
-
 ##############################################################
 # START READING CONFIGURATION
 #
@@ -470,48 +962,33 @@ me "${BASH_SOURCE}" # eat our own dog food
 g_file="${my_source}"
 g_dir="${my_dir}"
 g_dirname="${my_dir##*/}"
+g_context="${my_dir##*/}"
 g_name="${g_name:-$my_name}"
 
-# Obsolete? (is this needed?)
+#(is this needed?)
 #find the $c_file and importantly the $c_dir
-#c_file="$(cd "${0%/*}" 2>/dev/null; echo "$PWD"/"${0##*/}")"
+#c_file="$(cd "${0%/*}" 2>/dev/null; g_echo "$PWD"/"${0##*/}")"
 #if [ -L "$c_file" ]; then
 #  c_file=$(readlink -n "$c_file")
 #fi
 
-g_readDefaults "$my_dir"
-g_readLocations "$my_source"  
+g_readDefaults "$my_dir" && g_setContext "$my_source"  
 
-g_find_ Config "${CONFIG}.conf" && g_current_config="${g_found}" && source "${g_current_config}" || true
+# Obtain values from...
+if g_find_ Config "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
+then
+  g_current_config="${g_found}"
+  source "${g_current_config}"
+fi
 
-bold=$'' ; dim=$'' ; italic=$'' ; underline=$'' ; reset=$''  
-g_find_ Theme themes.sh && source "${g_found}" \
-    && options_common_vertical+="${NL}--theme=neon             select an alternate colour theme" \
-    || true
-
+options_common_vertical+="${NL}--theme=neon             select an alternate colour theme"
 breadcrumbs="${g_name}"
 
-# handle the default empty case
-[[ -z "$c_sub_cmd" ]] && c_sub_cmd="${c_default_subcommand:-$g_default_subcommand}"
+g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_default
 
-$VERBOSE && printf "Command: ${dim}${c_dir}${reset}/${bold}${c_name}${reset}"
-$VERBOSE && printf " Sub-command: ${c_sub_cmd}\n"
- 
-##############################################################
-# Run through all of the dispatchers
-#
-for s_dir in "${g_locations[@]}" 
-do
-    g_dispatcher="$s_dir/${g_default_dispatch}"
-    if [ -f "$g_dispatcher" ]; then
-      source "$g_dispatcher"
-    fi
-done
+$SHOWHELP && g_displayHelp
 
-$METADATAONLY || { $LOUD && echo "Not Found: $breadcrumbs ${bold}$c_sub_cmd${reset}" ; }
-
-exit 1
-
-# "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 
+:
+# "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php 
 # Any additional contribution submitted for incorporation into or for distribution with this file shall be presumed
 # subject to the same license."
