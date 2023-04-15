@@ -1,4 +1,9 @@
 #!/usr/bin/env bash
+#
+# Never in the annals of software engineering was so much owed
+# by so many to so few lines of code
+#                                        -- Martin Fowler
+#
 ##############################################################
 # The groan framework is implemented by this one script.
 #
@@ -7,6 +12,7 @@
 
 ##############################################################
 # Default metadata - our contribution to help
+#
 
 options_common_vertical=\
 "
@@ -31,7 +37,7 @@ options_=""
 ##############################################################
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 # Unofficial "Bash Strict Mode"
-
+#
 set -euo pipefail
 IFS=$'\n\t'
 shopt -s nullglob # make sure globs are empty arrays if nothing is found
@@ -41,7 +47,6 @@ NL=$'\n' # Just useful
 ##############################################################
 # Everyfile in the toolset traditionally calls this function
 #
-
 function me() #BASH_SOURCE
 {
   $GDEBUG && printf "\e[2m${1}\e[0m\n"
@@ -57,11 +62,11 @@ function my_name()
  
 ##############################################################
 # A standard means for platform differentiation
-# Use ${OSTYPE}
+g_PLATFORM="${BASH_VERSINFO[5]}"
 
 ##############################################################
-# Utility to ensure that sudo is available
-
+# Utility* to ensure that sudo is available
+#
 function g_needsSudo() {
     local prompt
     prompt=$(sudo -nv 2>&1)
@@ -82,16 +87,16 @@ function g_readDefaults()
   local c_dir="${1}"
   g_tmp=/tmp # TempDir for Linux ... or Windows
   #git bash has /tmp
-  #[[ "$OSTYPE" == msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
+  #[[ "$g_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
 
   case $THEME in
       none | off | 0)
-          bold=$''           
-          dim=$''            
-          italic=$''
-          underline=$''
-          reversed=$''
-          reset=$''
+          bold=$''           # Style Bold
+          dim=$''            # Style Dim
+          italic=$''         # Style Italic
+          underline=$'' # underline
+          reversed=$''  # reversed
+          reset=$''          # Reset
       ;;
       *)
           bold=$'\e[1m'      # Style Bold
@@ -111,7 +116,8 @@ function g_readDefaults()
     "${c_dir}/config"  	   # --global # installed in the code/config dir
   )
 
-  g_default_command="_default"
+  g_default_cmd="_default" #default
+  g_default_dispatch="_dispatch.sh"
 
   markdownViewerUtility="mdv -t 715.1331" # miscellaneous
 }
@@ -135,32 +141,40 @@ function g_setContext # from conf files
   c_dir=$(dirname "$c_file")
   c_dirname="${c_dir##*/}"
   c_name="${c_file##*/}" # `basename $c_file`
+  local commands_folder="${2:-commands}"
 
   g_locations=(
-	  "${c_dir}/${2:-commands}"                
-	  "${c_dir}/help"                  
+	  "${c_dir}/${commands_folder}"                
 	  "${c_dir}" 
+	  "${c_dir}/help"                  
   )
   
   g_types=( cmd red wip obsolete )
 
   # If our context has a different name look for our configuration in these locations
   [[ "$c_name" != "$c_dirname" ]] && \
-    g_find "Locations1" "${c_name}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
+    g_find_ "Locations1" "${c_name}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
   
   # Look for our context defined configuration in these locations
-    g_find "Locations2" "${c_dirname}.conf" "${g_config_file_locations[@]}" && source "$g_found"
+    g_find "Locations2" "${c_dirname}.conf" && source "$g_found"
     
   # in preference to a hidden personal locations file
-  # g_find "Locations" ".${c_name}.conf" "${c_dir}" && source "$g_found"
+  #g_find_ "Locations" ".${c_name}.conf" "${c_dir}" && source "$g_found"
 
   return 0
 }
 
 ##############################################################
-# search locations for a <filename>
+# search g_config_file_locations set in g_setContext
+# find a <filename>
+#
 
-function g_find () #1) log message type #2) filename needle #) haystack dirs
+function g_find () #1) type_string #2) filename #) dirs to look
+{
+  g_find_ "$@" "${g_config_file_locations[@]}" && return 0 || return 1
+}
+
+function g_find_ () #1) type_string #2) filename #) dirs to look
 {
   local dir file type="${1}" name="${2}" ; shift ; shift
 	for dir in "$@"
@@ -170,6 +184,7 @@ function g_find () #1) log message type #2) filename needle #) haystack dirs
        dir="${dir/${g_dir}/\$g_dir}"
        dir="${dir/$HOME/\$HOME}"
        if [[ -f "${g_found}" ]]; then
+         
           $GDEBUG && g_echo "${type}< ${dir}/${name}"
           return 0
        fi
@@ -183,8 +198,7 @@ function g_find () #1) log message type #2) filename needle #) haystack dirs
 function define(){ IFS='\n' read -r -d '' ${1} || true; }
 
 ##############################################################
-# rudimentary parse_yaml
-
+# on the tin
 function parse_yaml {
    local prefix=$2
    local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$'\034'
@@ -208,7 +222,7 @@ function g_executeScriptPath ()
 {
   local bk=("${g_locations[@]}") 
   _g_executeScriptPath "$@"
-  g_locations=("${bk[@]}") 
+  g_locations=("${bk[@]}")
 }
 
 function _g_executeScriptPath ()
@@ -239,7 +253,7 @@ function _g_executeScriptPath ()
             if [[ "$script" != "$s_path" ]] && [[ -f "$script" ]]; then
             
               g_executeScriptPath "$script" "${args[@]:+${args[@]}}"
-
+              
               # $SHOWHELP && g_displayHelp && exit  # moved to post dispatch
               $METADATAONLY || exit
 
@@ -273,11 +287,10 @@ function _g_executeScriptPath ()
         exit 0
     ;;
   esac
-
 }
 
-# A destructor to clear down variables that would otherwise
-# have side effects when collecting metadata in command lists.
+# Acts as a destructor to clear down variables that would otherwise
+# have knock on effects when collecting metatdata in command lists.
 function _g_unsetMetadata
 {
   unset wip
@@ -300,8 +313,33 @@ function g_sourceScriptMappingArgs
   source "$source"
 }
 
+
 ##############################################################
-# If a Command description is defined
+#
+# If description is not defined - no help is displayed.
+#
+# Help is in three parts: description, options, usage
+# Each has a main and supplementary
+#   - $description and $description_
+#   - $options     and $options_
+#   - $usage       and $usage_
+#
+# Description - is displayed with the first line in bold
+# Options - section titled in bold 'options:'
+# Usage   - section titled in bold 'usage:'
+# 
+options=""; options_=""; usage=""; usage_=""
+
+function g_displayHelp {
+
+  print_description
+
+  print_options
+  
+  print_usage
+
+  return 0
+}
 
 function _print_command_description()
 {
@@ -311,53 +349,39 @@ function _print_command_description()
 function print_command_description()
 {
   _print_command_description
-  printf "${c_description+\n\n}" # if the description is defined
-}
-
-##################################################################
-# Sub-Command Help is in three parts: description, options, usage
-#
-# Each has a main and supplementary
-#   - $description and $description_
-#   - $options     and $options_
-#   - $usage       and $usage_
-#
-# Description - is displayed with the first line in bold
-# Options     - section titled in bold 'options:'
-# Usage       - section titled in bold 'usage:'
-# 
-options=""; options_=""; usage=""; usage_=""
-
-function g_displayHelp {
-  print_description; print_options; print_usage
+  printf "${c_description+\n\n}" # if the c_description is defined
 }
 
 function _print_description()
 {
-  [[ -z ${description+x} ]] && g_echo "sub-command description is missing" && return 1
+  [[ -z ${description+x} ]] && g_echo "command description is missing" && return 1
 
   local desc="$description${NL}"
 
   printf "${bold}"
   _print_description_first_line
-  printf "${reset}${desc#*$'\n'}"
+  printf "${reset}"
+  printf "\n${reset}${desc#*$'\n'}"
 }
 
 function print_description()
 {
   _print_description
-  printf "${description+\n\n}"
+  printf "${description+\n}"
 }
 
 function _print_description_first_line()
 {
-    local desc="${description:-no metadata}"
-    printf "${description_first_line:-${desc%%$'\n'*}}"
+    for line in $(printf "${description}")
+    do
+      printf "$line"
+      return 0
+    done
 }
 
 function print_command_list_description()
 {
-  printf $(_print_description_first_line)
+  _print_description_first_line
 }
 
 function _print_options ()
@@ -379,7 +403,7 @@ function print_options ()
 
 function _print_usage()
 {
-  printf "\n${bold}usage:${reset}${usage}"
+  printf "${bold}usage:${reset}${usage}"
 }
 
 function print_usage()
@@ -392,6 +416,13 @@ function print_usage()
 function print_kv()
 {
   $LOUD && echo "${bold}${1}:${reset} ${2:-}${2:+ }${dim}${3:-}${reset}" || echo "${2:-}"
+  return 0 # needed
+}
+
+function g_debug_kv()
+{
+  $GDEBUG && echo "${1}: ${bold}${!1:-}${2:-}${reset}"
+  return 0 #(neded)
 }
 
 function g_echo() {
@@ -404,13 +435,21 @@ function g_echo() {
 function g_help()
 {
   [[ -n ${3+x} ]] \
-   && printf -v "$1" "%s%-${g_width:27}s%s\n" "${!1}" "$2" "$3" \
+   && printf -v "$1" "%s%-27s%s\n" "${!1}" "$2" "$3" \
    || printf -v "$1" "%s%s\n" "${!1}" "$2"
   return 0
 }
 
 ##############################################################
-# self-install
+
+g_option_vars=()
+function g_declare_options ()
+{
+  g_option_vars+=( "$@" )
+  for var in "$@"; do
+    declare -g "$var"="false"
+  done
+}
 
 function g_bashrc_install ()
 {
@@ -603,7 +642,10 @@ function g_findCommands()
 function g_dispatch ()
 {
   # note $c_cmd_arg requested may be partial and $s_cmd is the matched result
-  c_cmd_arg="${1}"
+  local DEFAULT=false
+  [[ -z ${1+x} ]] && DEFAULT=true
+
+  c_cmd_arg="${1:-$g_default_cmd}"
 
   for s_type in "${g_types[@]}"
   do
@@ -640,8 +682,8 @@ function g_dispatch ()
           g_unsetMetadata
           g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
 
-          $SHOWHELP && g_displayHelp && exit
-          $METADATAONLY && return 0 || exit 
+          $SHOWHELP && g_displayHelp && exit 0
+          $METADATAONLY && return 0 || exit 0
         done
       fi
     done
@@ -652,8 +694,12 @@ function g_dispatch ()
     exit 1
   fi
 
+  # if we were trying the default command and did not find it"
+  $DEFAULT && return 1
+
   $METADATAONLY && return 0
   
+  # otherwise it broke`
   $LOUD && g_echo "Not Found: $breadcrumbs ${bold}$c_cmd_arg${reset}"
   exit 1
 }
@@ -673,7 +719,7 @@ function g_listCmds()
   do
     for s_dir in "${g_locations[@]}"
     do
-      for s_path in "$s_dir/${g_default_command}.${s_type}."*
+      for s_path in "$s_dir/${g_default_cmd}.${s_type}."*
       do
         subs+=("$s_path")
       done
@@ -688,7 +734,8 @@ function g_listCmds()
     METADATAONLY=true g_executeScriptPath "$s_path"  
 
     printf "%-${bw}s" "$crumbs"
-    echo "$description"
+    print_command_list_description
+    printf "\n"
   done
 
   for s_type in "${g_types[@]}"
@@ -728,18 +775,6 @@ function g_listCmds()
   done
 }
 
-##############################################################
-# Options pattern util
-
-g_option_vars=()
-function g_declare_options ()
-{
-  g_option_vars+=( "$@" )
-  for var in "$@"; do
-    declare -g "$var"="false"
-  done
-}
-
 function g_default ()
 {
   description="list $c_name commands"
@@ -759,7 +794,7 @@ function g_default ()
 "
 $breadcrumbs                        list commands
 $breadcrumbs --install              install as bash alias
-$breadcrumbs --install=dtt --C=dtt  install as bash alias with config
+$breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 "
 
   $METADATAONLY && return 0
@@ -850,7 +885,8 @@ $breadcrumbs --install=dtt --C=dtt  install as bash alias with config
   #for i in "${!c_file_list[@]}"; do
     displayName="${c_file_list[i]##*/}"
     #echo "${bold}${displayName/-/ } commands:${reset}"
-    echo "${bold}${g_dir##*/} commands:${reset}"
+    #echo "${bold}${g_dir##*/} commands:${reset}"
+    echo "${bold}${g_context} commands:${reset}"
     
     g_listCmds "${c_file_list[i]}" "${crumbs_list[i]}"
     
@@ -962,7 +998,7 @@ me "${BASH_SOURCE}" # eat our own dog food
 g_file="${my_source}"
 g_dir="${my_dir}"
 g_dirname="${my_dir##*/}"
-g_context="${my_dir##*/}"
+[[ -z ${g_context+x} ]] && g_context="${my_dir##*/}"
 g_name="${g_name:-$my_name}"
 
 #(is this needed?)
@@ -984,9 +1020,11 @@ fi
 options_common_vertical+="${NL}--theme=neon             select an alternate colour theme"
 breadcrumbs="${g_name}"
 
-g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_default
+g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_dispatch || g_default
 
 $SHOWHELP && g_displayHelp
+ 
+return 0
 
 :
 # "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php 
