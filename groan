@@ -84,7 +84,9 @@ function g_needsSudo() {
 #1) this command directory
 function g_readDefaults()  
 { 
-  local c_dir="${1}"
+  local c_dir="${1}" 
+  local c_dirname="${c_dir##*/}"
+
   g_tmp=/tmp # TempDir for Linux ... or Windows
   #git bash has /tmp
   #[[ "$g_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
@@ -110,13 +112,13 @@ function g_readDefaults()
 
   g_config_file_options=("local" "user" "context" "global")
   g_config_file_locations=(
-    "$(pwd)"  	           # --local
-    "$HOME/.config"        # --user
-    "${c_dir}/../config"   # --context
-    "${c_dir}/config"  	   # --global # installed in the code/config dir
+    "$(pwd)"  	               # --local
+    "$HOME/.config/$c_dirname" # --user
+    "${c_dir}/../config"       # --context
+    "${c_dir}/config"  	       # --global # installed in the code/config dir
   )
 
-  g_default_cmd="_default" #default
+  c_default="_default" #default
   g_default_dispatch="_dispatch.sh"
 
   markdownViewerUtility="mdv -t 715.1331" # miscellaneous
@@ -565,6 +567,9 @@ function g_shiftArgsIntoSubCmd
     [[ -n "${c_cmd_arg}" ]]
 }
 
+# the command implementing script path may be of the form
+# ./commands/name.cmd.folder.sub.target.extn
+
 function g_parseScriptPath()
 {
   s_path="$1"
@@ -576,15 +581,15 @@ function g_parseScriptPath()
   s_isDispatcher=false
 
   #we remove everything .sub. onwards to avoid getting false matches on .cmd
-  local scriptRoute="${s_name%%.sub.*}" 
+  local name_upto_sub="${s_name%%.sub.*}" 
 
   for s_type in "${g_types[@]}"
   do
-    if [[ "$scriptRoute" =~ \.${s_type}\. ]]; then #a c_cmd_arg is defined
+    if [[ "$name_upto_sub" =~ \.${s_type}\. ]]; then #a c_cmd_arg is defined
 
       if [[ -f "$s_path" ]]; then
-        s_cmd="${scriptRoute%%.${s_type}.*}" # everything before the first .cmd
-        s_dest_sub="${scriptRoute#*${s_type}.}"  # keep everything after first .cmd.
+        s_cmd="${name_upto_sub%%.${s_type}.*}" # everything before the first .cmd
+        s_dest_sub="${name_upto_sub#*${s_type}.}"  # keep everything after first .cmd.
         s_dest_path="${s_dir%/*}/${s_dest_sub}/${s_dest_sub:-$c_name}"
         s_dest_subcmd_name="${s_name#*.sub.}"  # keep everything after .sub.
         [[ "$s_dest_subcmd_name" == *.${s_type}.* ]] && s_isDispatcher=false || s_isDispatcher=true
@@ -645,13 +650,13 @@ function g_dispatch ()
   local DEFAULT=false
   [[ -z ${1+x} ]] && DEFAULT=true
 
-  c_cmd_arg="${1:-$g_default_cmd}"
+  c_cmd_arg="${1:-$c_default}"
 
   for s_type in "${g_types[@]}"
   do
 
-    target="${c_cmd_arg}*.${s_type}.*"
-    exact="${c_cmd_arg}.${s_type}.*"
+    local target="${c_cmd_arg}*.${s_type}.*"
+    local exact="${c_cmd_arg}.${s_type}.*"
 
     for s_dir in "${g_locations[@]}"
     do
@@ -660,24 +665,24 @@ function g_dispatch ()
       # if an exact match is available
       for s_path in "$s_dir"/$exact
       do
-        target=$exact # upgrade the target to prioritize the exact match
+        target="$exact" # upgrade the target to prioritize the exact match
       done
 
-      list=()
+      s_list=()
       for s_path in "$s_dir"/$target
       do
-        g_parseScriptPath "$s_path"
-
-        if [ -n "$s_cmd" ]; then
-          list+=("$s_cmd")
-          $GDEBUG && g_echo "Found #${#list[@]} : $s_path"
-        fi
+        s_cmd="${s_path##*/}" 
+        s_cmd="${s_cmd%%.*}"  # script name up to first '.'
+      
+        s_list+=("$s_cmd")
+        $GDEBUG && g_echo "Found #${#s_list[@]} : $s_cmd : $s_path"
+        
       done
 
-      if [ ${#list[@]} -eq 1 ]; then # one script matches
+      if [ ${#s_list[@]} -eq 1 ]; then # one script matches
         for s_path in "$s_dir"/$target
         do
-          [[ "$s_cmd" == _* ]] || breadcrumbs="$breadcrumbs $s_cmd"
+          [[ "$s_cmd" != _* ]] && breadcrumbs="$breadcrumbs $s_cmd"
 
           g_unsetMetadata
           g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
@@ -719,7 +724,7 @@ function g_listCmds()
   do
     for s_dir in "${g_locations[@]}"
     do
-      for s_path in "$s_dir/${g_default_cmd}.${s_type}."*
+      for s_path in "$s_dir/${c_default}.${s_type}."*
       do
         subs+=("$s_path")
       done
@@ -775,7 +780,7 @@ function g_listCmds()
   done
 }
 
-function g_default ()
+function g_builtin_default ()
 {
   description="list $c_name commands"
 
@@ -1020,9 +1025,9 @@ fi
 options_common_vertical+="${NL}--theme=neon             select an alternate colour theme"
 breadcrumbs="${g_name}"
 
-g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_dispatch || g_default
+g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_dispatch || g_builtin_default
 
-$SHOWHELP && g_displayHelp
+$SHOWHELP &&  g_displayHelp
  
 return 0
 
