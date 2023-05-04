@@ -118,10 +118,7 @@ function g_readDefaults()
     "${c_dir}/config"  	       # --global # installed in the code/config dir
   )
 
-  c_default="_default" #default
-  g_default_dispatch="_dispatch.sh"
-
-  markdownViewerUtility="mdv -t 715.1331" # miscellaneous
+  c_default="_default" 
 }
 
 ##############################################################
@@ -229,22 +226,19 @@ function g_executeScriptPath ()
 
 function _g_executeScriptPath ()
 {  
-  s_path="$1"
-  local meta_complete
+  g_basicParseScriptPath "$1"
 
   # When set -u is enabled bash<=4.1, this pattern
   # is needed: "${args[@]:+${args[@]}}"
 
-  local status
-  $METADATAONLY && status="Metadata" || status="Running"
+  $METADATAONLY && local status="Metadata" || local status="Running"
 
-  case "${s_path##*.}" in
+  case "${s_ext}" in
     conf)
         $GDEBUG && g_echo "$status< $s_path"
-        g_sourceScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" && meta_complete=true || meta_complete=false
-        $METADATAONLY && $meta_complete && return 0
+        g_sourceScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" && $METADATAONLY && return 0
 
-        s_name=${s_name/.*.conf/}
+        s_name=${s_name%.*.conf}
         $GDEBUG && g_echo "Locations: ${g_locations[@]:+${g_locations[@]}}" 
             
         for s_dir in "${g_locations[@]}"
@@ -269,7 +263,7 @@ function _g_executeScriptPath ()
   
         $XDEBUG && set -x
         g_sourceScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}"
-        if $XDEBUG; then set +x; fi #short && form does not agree with a following return
+        $XDEBUG && set +x
     ;;
     exec)
         $GDEBUG && g_echo "$status exec> $s_path ${args[@]:+${args[@]}}"
@@ -285,10 +279,13 @@ function _g_executeScriptPath ()
     ;;
     *)
         $GDEBUG && g_echo "$status eval> $s_path ${args[@]:+${args[@]}}"
+        $XDEBUG && set -x
         eval "$s_path" "${args[@]:+${args[@]}}"
+        $XDEBUG && set +x
         exit 0
     ;;
   esac
+  return 0 # needed due to use of &&
 }
 
 # Acts as a destructor to clear down variables that would otherwise
@@ -567,6 +564,15 @@ function g_shiftArgsIntoSubCmd
     [[ -n "${c_cmd_arg}" ]]
 }
 
+function g_basicParseScriptPath()
+{
+  s_path="$1"
+  s_name="${s_path##*/}" # path, removing upto last '/'
+  s_dir="${s_path%/*}"   # path, removing last '/'
+  s_cmd="${s_name%%.*}"  # name, up to first '.'      
+  s_ext="${s_name##*.}"  # name, remove up to last '.'      
+}
+
 # the command implementing script path may be of the form
 # ./commands/name.cmd.folder.sub.target.extn
 
@@ -611,13 +617,13 @@ function g_parseScriptPath()
 function g_findCommands()
 {
   local c_file="$1"
+  c_file_list+=("$c_file")
+
   local crumbs="$2"
+  crumbs_list+=("$crumbs")
   
   $GDEBUG && printf "CMD: %s %s\n" "${crumbs}" "${c_file}"
   $GDEBUG && g_echo "Command: ${dim}${c_dir}${reset}/${bold}${c_name}${reset} ${c_cmd_arg} ${args[@]:+${args[@]}}" 
-
-  c_file_list+=("$c_file")
-  crumbs_list+=("$crumbs")
 
   local s_dir
   local s_path
@@ -652,6 +658,7 @@ function g_dispatch ()
 
   c_cmd_arg="${1:-$c_default}"
 
+  local found=()
   for s_type in "${g_types[@]}"
   do
 
@@ -668,18 +675,15 @@ function g_dispatch ()
         target="$exact" # upgrade the target to prioritize the exact match
       done
 
-      s_list=()
       for s_path in "$s_dir"/$target
       do
-        s_cmd="${s_path##*/}" 
-        s_cmd="${s_cmd%%.*}"  # script name up to first '.'
-      
-        s_list+=("$s_cmd")
-        $GDEBUG && g_echo "Found #${#s_list[@]} : $s_cmd : $s_path"
+        g_basicParseScriptPath "$s_path"
         
+        found+=("$s_cmd")
+        $GDEBUG && g_echo "Found #${#found[@]} : $s_cmd : $s_path"       
       done
 
-      if [ ${#s_list[@]} -eq 1 ]; then # one script matches
+      if [ ${#found[@]} -eq 1 ]; then # one script matches
         for s_path in "$s_dir"/$target
         do
           [[ "$s_cmd" != _* ]] && breadcrumbs="$breadcrumbs $s_cmd"
@@ -694,8 +698,8 @@ function g_dispatch ()
     done
   done
 
-  if [ ${#list[@]} -gt 1 ]; then
-    $LOUD && echo "Multiple options exist for requested '${c_cmd_arg}' (${list[@]})"
+  if [ ${#found[@]} -gt 1 ]; then
+    $LOUD && echo "Multiple matches found for '${c_cmd_arg}' (${found[@]})"
     exit 1
   fi
 
@@ -811,13 +815,11 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 
   for arg in "${args[@]:+${args[@]}}"
   do
+    LIST=false
     case "$arg" in
-      *)
-        LIST=false
-      ;;&
       --install=*)
         INSTALL=true
-      install_as=${arg#--install=}
+        install_as=${arg#--install=}
       ;;
       --install)
         INSTALL=true
@@ -827,9 +829,6 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       ;;
       --which)
         SHOW_EXE=true
-      ;;
-      *)
-        :
       ;;
     esac
   done
@@ -911,10 +910,11 @@ THEME="${THEME:-default}"
 
 ##############################################################
 # Debug verbosity levels
-# DEBUG  - User level Debug (for non-groan code)
-# DDEBUG - Developer level "Deep" Debug (for non-groan code)
-# GDEBUG - Debug (for groan code)
-# XDEBUG - Bash shell debugging using set -x
+# DEBUG  -D  User level Debug (for non-groan code)
+# DDEBUG -DD Developer level "Deep" Debug (for non-groan code)
+# GDEBUG -GD Debug (for groan code)
+# XDEBUG -XD Bash shell debugging using set -x
+
 g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT LOUD
 LOUD=true
 
@@ -937,7 +937,7 @@ do
       ==*)
         show_me_variable="${arg#==}"
       ;;
-      -DD|--ddebug)
+      -DD|--ddebug|--deep-debug) 
         DDEBUG=true
       ;;
       -GD|--groan-debug)
@@ -946,10 +946,10 @@ do
         VERBOSE=true
         LOUD=true
       ;;
-      -XX)
+      -XD|--bash-debug)
         XDEBUG=true
       ;;
-      --debug | -D)
+      -D | --debug)
         DEBUG=true
         VERBOSE=true
         LOUD=true

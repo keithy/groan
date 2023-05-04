@@ -20,7 +20,7 @@ options_common_vertical=\
 
 usage=\
 "
-$breadcrumbs                           list commands
+$breadcrumbs                            list commands
 $breadcrumbs --install                  install as bash alias
 $breadcrumbs --install=other --C=other  install as bash alias with config
 "
