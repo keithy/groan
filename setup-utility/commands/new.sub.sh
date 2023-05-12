@@ -38,7 +38,7 @@ done
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 TEMPLATE=""
 targetPath=""

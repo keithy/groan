@@ -2,17 +2,17 @@
 #
 # by Keith Hodges 2019
 #
-$DEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
+$GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 command="update"
-description="self-update ${g_name}"
+description="self-update ${g_file}"
 usage=\
 "$breadcrumbs                  # update tool data
 $breadcrumbs --code --confirm # update code"
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 UPDATE_CODE=false
 UPDATE_DATA=true

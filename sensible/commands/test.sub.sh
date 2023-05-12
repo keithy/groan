@@ -13,7 +13,7 @@ $breadcrumbs --help        # this message"
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 LISTHOSTS=false
 INSTALL=false

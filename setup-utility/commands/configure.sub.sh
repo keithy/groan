@@ -22,7 +22,7 @@ $breadcrumbs --help                          # this message
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 g_declare_options SHOWCONFIG EDITCONFIG SHOWOPTIONS INSTALL GETFILE
 
@@ -103,7 +103,7 @@ function print_location ()
             path="(pwd)"
         ;;
         *)
-            path="${path/${g_dir}/($g_name)}"
+            path="${path/${g_dir}/($g_file)}"
         ;;
     esac
 
@@ -163,7 +163,7 @@ function print_preset_name()
             printf "   %s\n" "${path/./(pwd)}"
         ;;
         built-in)
-            printf "   %s\n" "${path/${g_dir}/($g_name)}"
+            printf "   %s\n" "${path/${g_dir}/($g_file)}"
         ;;
     esac
 }
@@ -207,7 +207,7 @@ if $SHOWOPTIONS; then
     foreach_preset_do "*" print_preset_name
 
     echo
-    printf "Current setting: " ; print_path "${g_current_config:-none (no config) ($CONFIG not found)}"
+    printf "Current setting: " ; print_path "${g_config:-none (no config) ($CONFIG not found)}"
     echo
 fi
 
@@ -237,7 +237,7 @@ if $EDITCONFIG; then
     foreach_config_do "$match" edit_config_file || exit 0
 
     echo
-    printf "Current setting: " ; print_path "${g_current_config:-$CONFIG ($CONFIG.conf not found)}"
+    printf "Current setting: " ; print_path "${g_config:-$CONFIG ($CONFIG.conf not found)}"
     echo
 
     exit 1
@@ -259,7 +259,7 @@ if $INSTALL; then
     foreach_preset_do "$match" install_preset_file || exit 0
 
     echo
-    printf "Current setting: " ; print_path "${g_current_config:-}"
+    printf "Current setting: " ; print_path "${g_config:-}"
     echo " (${bold}$match${reset} not found)"
 
     exit 1 

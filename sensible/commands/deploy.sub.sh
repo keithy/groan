@@ -17,7 +17,7 @@ $breadcrumbs --help                 # this message"
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 LISTHOSTS=false
 INSTALL=false
@@ -85,7 +85,7 @@ if $REMOVE; then
       if [[ ",all,${sensible_tags[$host]}," == *,"$tag,"* ]]; then
         $LOUD && echo "${host}(${tag}):" ${sensible_deploy[$host]}
         code_at="${sensible_deploy[$host]##*:}"    
-        linked_to="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_name}"
+        linked_to="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_file}"
         $LOUD && echo ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" rm -rf "${linked_to}" "${code_at}"
         $CONFIRM && ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" rm -rf "${linked_to}" "${code_at}" || true  
         $DRYRUN && echo "${dim}dryrun:  --confirm required to proceed ${reset}"
@@ -104,8 +104,8 @@ for host in ${sensible_host_names[@]}; do
       $LOUD && echo rsync -a --delete "${r_options[@]}"  "${g_dir}/*" "${sensible_deploy[$host]}"
       rsync -a --delete "${r_options[@]}" "${g_dir}/"* "${sensible_deploy[$host]}"
       
-      install_src="${sensible_deploy[$host]##*:}/${g_name}"    
-      install_dest="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_name}"
+      install_src="${sensible_deploy[$host]##*:}/${g_file}"    
+      install_dest="${sensible_install[$host]:-${sensible_install["_default_"]}}/${g_file}"
       $LOUD && $INSTALL && echo ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" "mkdir -p \"${install_dest%/*}\" && ln -s \"${install_src}\" \"${install_dest}\""
       $CONFIRM && $INSTALL && ssh "${ssh_options[@]}" "${sensible_deploy[$host]%:*}" "mkdir -p \"${install_dest%/*}\" && ln -s \"${install_src}\" \"${install_dest}\"" || true
       $CONFIRM && echo "done"

@@ -5,7 +5,7 @@
 me "$BASH_SOURCE" #tradition
 
 command="commands"
-description="list $c_name $command"
+description="list $c_file $command"
 
 #since help doesn't exec anything many common options don't apply
 options_common_vertical=\
@@ -69,7 +69,7 @@ fi
 
 if $INSTALL; then
 
-	tag="##:${install_as:-$g_name}:##"
+	tag="##:${install_as:-$g_file}:##"
 
 	function clean()
 	{
@@ -89,11 +89,11 @@ if $INSTALL; then
 	touch "$HOME/.bashrc"
 	cp "$HOME/.bashrc" "$bashrc" || true
 
-	$DEBUG && echo "Before:" && cat "$bashrc"
+	$GDEBUG && echo "Before:" && cat "$bashrc"
 
 	clean "$bashrc"
 
-	$DEBUG && echo "Cleaned:" && cat "$bashrc" 
+	$GDEBUG && echo "Cleaned:" && cat "$bashrc" 
 
 	with_config=""
 	if [[ -n ${CONFIG+x} ]]; then
@@ -101,12 +101,12 @@ if $INSTALL; then
 	fi
 
 	if [[ "${install_as}" ]]; then
-	 	append_to "$bashrc" "alias ${install_as}='${g_file} ==g_name=${install_as}$with_config'"
+	 	append_to "$bashrc" "alias ${install_as}='${g_file} ==g_file=${install_as}$with_config'"
 	else
-	 	append_to "$bashrc" "alias ${g_name}='${g_file}$with_config'"
+	 	append_to "$bashrc" "alias ${g_file}='${g_file}$with_config'"
 	fi
 
-	$LOUD && echo "installed alias ${bold}${install_as:-$g_name}${reset}"
+	$LOUD && echo "installed alias ${bold}${install_as:-$g_file}${reset}"
 	$VERBOSE && echo "${dim}bashrc${reset}" && cat "$bashrc" || true
 	$CONFIRM && cp "$bashrc" "$HOME/.bashrc" || echo "DRY-RUN --confirm to apply"
 
@@ -142,8 +142,9 @@ function list_sub_cmds()
 	# Display the default sub-command at the top of  the list (without its breadcrumb)
     for s_path in "${cmds[@]}"
 	  do
-		g_parseScriptPath "$s_path"
-		$DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})"
+		g_parseScriptPathMore
+ "$s_path"
+		$GDEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_file (${s_sub_cmd:-no subcommand})"
 
 		METADATAONLY=true
 		g_executeScriptPath "$s_path"  
@@ -157,8 +158,9 @@ function list_sub_cmds()
 		#Display the c_sub_cmds (with breadcrumb)
 		for s_path in "$s_dir"/[^_]*.sub.*
 		do
-		  g_parseScriptPath "$s_path"
-		  $DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
+		  g_parseScriptPathMore
+ "$s_path"
+		  $GDEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_file (${s_sub_cmd:-no subcommand})" 
 
 		  # commented out this if clause so as to include display of commands that go a level deeper
 		  # these would not normally be included in the full recursive list of commands
@@ -178,7 +180,7 @@ function list_sub_cmds()
 	done
 }
 
-if $DEBUG; then # print out results of recursive search
+if $GDEBUG; then # print out results of recursive search
   echo
   for i in "${!c_file_list[@]}"; do    
        printf "(%d) %-45s" "$i" "${crumbsList[i]}"

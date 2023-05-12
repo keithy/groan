@@ -39,7 +39,7 @@ function list_topics()
 
 c_file_list=()
 crumbsList=()
-g_findCommands "${g_file}" ${g_name}
+g_findCommands "${g_file}" ${g_file}
 
 
 TOPIC="${1:-}"

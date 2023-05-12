@@ -93,9 +93,9 @@ Groan (sub)commands are called after having:
 Groan looks for config files in a number of places. This can be configured in `groan.locations.sh`
 
 ```
-	"$g_working_dir/$c_name.conf"  # --local
-	"$HOME/.$c_name.conf"          # --user
-	"$c_dir/$c_name.conf"          # --global )
+	"$g_working_dir/$c_file.conf"  # --local
+	"$HOME/.$c_file.conf"          # --user
+	"$c_dir/$c_file.conf"          # --global )
 ```
 
 ## Sub-Commands

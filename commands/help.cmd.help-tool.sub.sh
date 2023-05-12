@@ -21,14 +21,16 @@
 
 me "$BASH_SOURCE" #tradition
 
-g_parseScriptPath "${s_path}"
+g_parseScriptPathMore
+ "${s_path}"
 
-g_debug_kv s_name
+g_debug_kv s_file
 g_debug_kv s_dest_path
 
-g_setContext "$s_dest_path"
+g_readConfig "$s_dest_path"
 
-g_shiftArgsIntoSubCmd && g_dispatch "$c_cmd_arg" || g_default
+g_shiftArgsInto_g_next
+ && g_dispatch "$g_next" || g_default
 
 # "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 
 # Any additional contribution submitted for incorporation into or for distribution with this file shall be presumed

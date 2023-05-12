@@ -21,7 +21,7 @@ function list_sub_cmds()
   local c_file="$1"
   local crumbs="$2"
  
-  $DEBUG && echo "list_sub_cmds($c_file, $crumbs)"
+  $GDEBUG && echo "list_sub_cmds($c_file, $crumbs)"
   
   g_readLocations "$c_file"
 
@@ -31,8 +31,9 @@ function list_sub_cmds()
 		#if ! [[ "$g_default_subcommand" == _* ]] ; then    
 		 for s_path in $s_dir/${c_default_subcommand:-$g_default_subcommand}.sub.*
 		  do
-			g_parseScriptPath "$s_path"
-			$DEBUG && echo "Parsed[$s_path]: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
+			g_parseScriptPathMore
+ "$s_path"
+			$GDEBUG && echo "Parsed[$s_path]: …${s_dir##*/}${dim}/${reset}$s_file (${s_sub_cmd:-no subcommand})" 
 			METADATAONLY=true
 			printf "%-30s" "$crumbs"
 			g_executeScriptPath "$s_path"  
@@ -44,7 +45,7 @@ function list_sub_cmds()
 
 local c_file="$1"
 
- $DEBUG && echo "c_file: $c_file"
+ $GDEBUG && echo "c_file: $c_file"
  g_readLocations "$c_file"
 	
  for s_dir in ${g_locations[@]} ; do
@@ -52,9 +53,10 @@ local c_file="$1"
 	# Display the c_sub_cmds (with breadcrumb)
   	for s_path in $s_dir/[^_]*.sub.*
     do
-      g_parseScriptPath "$s_path"
+      g_parseScriptPathMore
+ "$s_path"
 
-      $DEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_name (${s_sub_cmd:-no subcommand})" 
+      $GDEBUG && echo "Parsed: …${s_dir##*/}${dim}/${reset}$s_file (${s_sub_cmd:-no subcommand})" 
 
       if [[ -n "$s_sub_cmd" ]] && [[ "$s_dest_subcmd_name" == *.sub.* ]]; then
          
@@ -72,9 +74,9 @@ local c_file="$1"
 
 c_file_list=()
 crumbsList=()
-g_findCommands "${g_file}" ${g_name}
+g_findCommands "${g_file}" ${g_file}
 
-if $DEBUG; then # print out results of recursive search
+if $GDEBUG; then # print out results of recursive search
   echo
   for i in "${!c_file_list[@]}"; do    
        printf "(%d) %-45s" $i ${crumbsList[i]}

@@ -157,7 +157,7 @@ fi
 
 if $RUN_TEST; then
   $LOUD && echo "Action: ${bold}${command^}${reset}"
-  $DEBUG && echo "Kind: ${kind} Choice: $choice"
+  $GDEBUG && echo "Kind: ${kind} Choice: $choice"
 
   get_suites "${kind}"
 
@@ -169,7 +169,7 @@ if $RUN_TEST; then
 
     [[ "$suite" == "$choice"* ]] \
       && cd "${test_search_root}" \
-      && RESULTS=false LOUD=$VERBOSE VERBOSE=$DEBUG DEBUG=$XDEBUG source "${suite}"
+      && RESULTS=false LOUD=$VERBOSE VERBOSE=$GDEBUG DEBUG=$XDEBUG source "${suite}"
   done
 
   if $RESULTS; then

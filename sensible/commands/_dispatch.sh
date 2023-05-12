@@ -8,15 +8,16 @@
 # Failthrough to _not_found_sub.<cmd>.cmd.<cmdsub>.sub.<ext>
 # Partial matching of c_sub_cmds is supported
 
-$DEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
+$GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 #######
 #These functions implement the format/policy of each command script for this folder
 #######
-function g_parseScriptPath()
+function g_parseScriptPathMore
+()
 {
   s_path="$1"
-  s_name="${s_path##*/}"
+  s_file="${s_path##*/}"
   s_dir="${s_path%/*}"
   s_sub_cmd=""
   s_dest_cmd=""
@@ -24,7 +25,7 @@ function g_parseScriptPath()
   s_isDispatcher=false
 
   #we remove everything .sub. onwards to avoid getting false matches on .sub
-  local scriptRoute="${s_name%%.cmd.*}" 
+  local scriptRoute="${s_file%%.cmd.*}" 
 
   if [[ "$scriptRoute" =~ \.sub\. ]]; then #a c_sub_cmd is defined
 
@@ -32,8 +33,8 @@ function g_parseScriptPath()
 
       s_sub_cmd="${scriptRoute%%.sub.*}" # everything before the first .sub
       s_dest_cmd="${scriptRoute#*sub.}"  # keep everything after first .sub.
-      s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd:-$c_name}"
-      s_dest_subcmd_name="${s_name#*.cmd.}"  # keep everything after .cmd.
+      s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd:-$c_file}"
+      s_dest_subcmd_name="${s_file#*.cmd.}"  # keep everything after .cmd.
       [[ "$s_dest_subcmd_name" == *.sub.* ]] && s_isDispatcher=false || s_isDispatcher=true
     fi
   fi
@@ -48,7 +49,7 @@ function g_findCommands()
 {
   local c_file="$1"
   local crumbs="$2"
-  $DEBUG && echo "g_findCommands($c_file, $crumbs)"
+  $GDEBUG && echo "g_findCommands($c_file, $crumbs)"
 
   c_file_list+=("$c_file")
   crumbsList+=("$crumbs")
@@ -62,7 +63,8 @@ function g_findCommands()
   do
     for s_path in "$s_dir"/*.sub.*.cmd.*
     do
-      g_parseScriptPath "$s_path"
+      g_parseScriptPathMore
+ "$s_path"
 
       if [ -n "$s_sub_cmd" ]; then
         #if ! [[ "$s_dest_subcmd_name" == *.sub.* ]]; then #this c_sub_cmd invokes a g_dispatcher
@@ -81,7 +83,7 @@ function g_findCommands()
 target="${c_sub_cmd}*.sub.*"
 exact="${c_sub_cmd}.sub.*"
 
-$DEBUG && echo "Looking for $target in: $s_dir"
+$GDEBUG && echo "Looking for $target in: $s_dir"
 
 # if an exact match is available - upgrade the target to prioritize the exact match
 for s_path in $s_dir/$exact
@@ -92,11 +94,12 @@ done
 list=()
 for s_path in $s_dir/$target
 do
-    g_parseScriptPath "$s_path"
+    g_parseScriptPathMore
+ "$s_path"
 
     if [ -n "$s_sub_cmd" ]; then
       list+=("$s_sub_cmd")
-      $DEBUG && echo "Found #${#list[@]} : $s_path"
+      $GDEBUG && echo "Found #${#list[@]} : $s_path"
     fi
 done
 

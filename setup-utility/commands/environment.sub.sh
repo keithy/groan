@@ -16,13 +16,13 @@ $breadcrumbs environment --help"
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 GETEXEC=false
 what="env"
 for arg in "$@"  
 do
-    $DEBUG && echo "Arg: $arg"
+    $GDEBUG && echo "Arg: $arg"
     if $GETEXEC; then
         what=$arg
         GETEXEC=false

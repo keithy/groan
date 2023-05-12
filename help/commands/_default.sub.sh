@@ -21,7 +21,7 @@ ${breadcrumbs} --help    # this text
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 helpRequest=""
 for arg in $@
@@ -38,7 +38,7 @@ do
   esac
 done
 
-$DEBUG && echo "Help request: '$helpRequest'"
+$GDEBUG && echo "Help request: '$helpRequest'"
 
 #check user has given us a file reference
 if [[ -z "$helpRequest" ]]; then
@@ -55,12 +55,12 @@ previous=""
 
 for loc in ${g_locations[@]}
 do
-  $DEBUG && echo "Looking for $target in: $loc"
+  $GDEBUG && echo "Looking for $target in: $loc"
 
   [[ "$previous" == "$loc" ]] && continue
   previous="$loc"
 
-  $DEBUG && echo "Looking for $target in: $loc"
+  $GDEBUG && echo "Looking for $target in: $loc"
 
   # if an exact match is available - upgrade the target to prioritise the exact match
   for found in $loc/$exact
@@ -71,7 +71,7 @@ do
   for found in $loc/$target
   do
     if [ -f "$found" ]; then
-      $DEBUG && echo "Found: $found"
+      $GDEBUG && echo "Found: $found"
       helpFile="$found"
       continue 2
     fi
@@ -85,20 +85,20 @@ fi
 	
 case ${helpFile##*.} in
   txt | text)
-      $DEBUG && echo "Viewing txt: $found"
+      $GDEBUG && echo "Viewing txt: $found"
       cat $helpFile
       echo
   ;;
   md)
-      $DEBUG && echo "Using $g_markdown_viewer to display markdown: $found"
+      $GDEBUG && echo "Using $g_markdown_viewer to display markdown: $found"
       ${g_markdown_viewer%% *} ${g_markdown_viewer#* } $helpFile
   ;;
   sh)
-      $DEBUG && echo "Running source: $found"
+      $GDEBUG && echo "Running source: $found"
       source $helpFile
   ;;
   *)
-      $DEBUG && echo "Running eval: $found"
+      $GDEBUG && echo "Running eval: $found"
       eval $helpFile
   ;;
 esac

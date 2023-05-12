@@ -2,7 +2,7 @@
 #
 # by Keith Hodges 2010
 #
-$DEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
+$GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 command="self-install"
 description="install in system"
@@ -12,7 +12,7 @@ $breadcrumbs self-install --unlink"
 
 $METADATAONLY && return
 
-$DEBUG && echo "Command: '$command'"
+$GDEBUG && echo "Command: '$command'"
 
 ADDACTION=false
 ADDLINK=false
@@ -46,10 +46,10 @@ do
 done
 
 if $UNLINK; then
-    theInstalledLink="$(command -v "$g_name" || true)"
-    echo "THEINSTALLEDLINK: $theInstalledLink ($g_name)   [$PATH]"
+    theInstalledLink="$(command -v "$g_file" || true)"
+    echo "THEINSTALLEDLINK: $theInstalledLink ($g_file)   [$PATH]"
     if [[ -z "$theInstalledLink" || "$theInstalledLink" == "$g_file" ]]; then
-        echo "$g_name appears not to be installed"
+        echo "$g_file appears not to be installed"
         exit 1
     fi
 
@@ -96,10 +96,10 @@ if [[ ! -d "$installPath" ]]; then
 fi
 
 if $ADDLINK; then
-    $LOUD && echo "ln -s ${g_file} $installPath/${g_name}"
+    $LOUD && echo "ln -s ${g_file} $installPath/${g_file}"
     $DRYRUN && echo "dryrun: --confirm required to proceed"
-    $CONFIRM && ln -s "${g_file}" "$installPath/${g_name}" 
-    $CONFIRM && echo "Installed symbolic link from $installPath/${g_name} to ${g_file}"
+    $CONFIRM && ln -s "${g_file}" "$installPath/${g_file}" 
+    $CONFIRM && echo "Installed symbolic link from $installPath/${g_file} to ${g_file}"
 fi
 
 exit 0
