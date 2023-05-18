@@ -8,7 +8,7 @@ command="version"
 description="versions according to git"
 usage="$breadcrumbs"
 
-$METADATAONLY && return
+$METADATAONLY && return 0
 
 c_file_list=()
 crumbsList=()

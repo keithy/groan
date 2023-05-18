@@ -23,7 +23,6 @@
 options_common_vertical=\
 "
 --help    | -H | -?       usage help for a command
---list    | -L            commands list for a command
 --quiet   | -Q            quiet mode - say nothing
 --verbose | -V            verbose
 --debug   | -D            users debug (all -GD)
@@ -267,7 +266,7 @@ function u_define () { IFS='\n' read -r -d '' ${1} || true; }
 #
 function g_executeScriptPath ()
 {
-  local bk=("${g_locations[@]}") 
+  local bk=("${g_locations[@]}")
   _g_executeScriptPath "$@"
   g_locations=("${bk[@]}")
 }
@@ -275,7 +274,7 @@ function g_executeScriptPath ()
 function _g_executeScriptPath ()
 {  
   g_parseScriptPath "$1"
-
+  s_alias="${s_alias:-$s_cmd}" 
   # When set -u is enabled bash<=4.1, this pattern
   # is needed: "${args[@]:+${args[@]}}"
 
@@ -299,14 +298,16 @@ function _g_executeScriptPath ()
     ;;
     sh)
         $GDEBUG && g_echo "$status source> $(print_dir "$s_path") ${args[@]:+${args[@]}}"        
-  
         $XDEBUG && set -x
         g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}"
         $XDEBUG && set +x
     ;;
     exec)
         $GDEBUG && g_echo "$status exec> $(print_dir "$s_path") ${args[@]:+${args[@]}}"
-        exec "$s_path" "${args[@]:+${args[@]}}"
+
+        $METADATAONLY && g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" \
+                      || exec "$s_path" "${args[@]:+${args[@]}}"
+
     ;;
     ps1)
         $GDEBUG && g_echo "$status exec> $(print_dir "$s_path") ${args[@]:+${args[@]}}"
@@ -484,8 +485,10 @@ g_option_vars=()
 function g_declare_options ()
 {
   g_option_vars+=( "$@" )
-  for var in "$@"; do
-    declare -g "$var"="false"
+  for ea in "$@"; do
+    local val="${ea#*=}"
+    [[ "$val" == "$ea" ]] && val=false
+    declare -g "${ea%%=*}"="${val}"
   done
 }
 
@@ -598,59 +601,23 @@ function g_parseScriptPath ()
   s_ext="${s_file##*.}"           # name, remove up to last '.'    
   s_base="${s_file%.*}"           # name, keep up to last '.'
 
-  s_rest="${s_base#*${s_type:-}.}"  # base, remove up to first type
-}
-
-# Recursively scan the g_nexts for those that call g_dispatch of a contained command
-# g_findCommands populates two arrays
-# c_file_list= each element is a sub-command file (e.g. helper)
-# breadcrumbs_list= each element is a list of c_cmds that reaches the above command
-
-function g_findCommands()
-{
-  METADATAONLY=true
-  local c_dir="$1" c_file="$2" crumbs="${3:-}" c_path="$c_dir/$c_file"
-  
-  c_file_list+=("$c_file")
-  crumbs_list+=("$crumbs")
-  
-  $GDEBUG && printf "CMD: %s %s\n" "${crumbs}" "${c_file}"
-  $GDEBUG && g_echo "Command: ${dim}${c_dir}${reset}/${bold}${c_file}${reset} ${c_cmd} ${args[@]:+${args[@]}}" 
-
-  # local s_dir s_path
-
-  g_readConfig "$c_dir" "$c_file"
-
-  for s_type in "${g_types[@]}"
-  do
-    for s_dir in "${g_locations[@]}"
-    do
-      for s_path in "$s_dir"/*.${s_type}.*
-      do
-        g_parseScriptPath "$s_path"
-  
-        [[ "$s_cmd" != _* ]] && [[ -z "${s_alias:-}" ]] && crumbs="$crumbs $s_cmd"
-        crumbs+=("${s_cmd}")
-        g_unsetMetadata
-        METADATAONLY=true
-        old_s_path="$s_path"
-        g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
-
-        if [[ -n ${g_next+x} ]]
-        then
-            echo "$old_s_path" "$s_path" "$c_file $g_next"
-            g_findCommands "$s_dir" "$s_file" "$crumbs $g_next"
-        fi
-      done
-    done
-  done
+  s_rest="${s_base#*.*.}"  # base, remove up to second dot
 }
 
 function g_aliasDispatch ()
 {
   s_alias="$s_cmd"
-  g_debug_kv s_alias
   g_dispatch "$@"
+}
+
+function g_nextDispatch ()
+{
+  if g_shiftArgsInto_g_next; then
+    breadcrumbs="${breadcrumbs} ${g_next}"
+    g_dispatch "$g_next"
+  else
+    g_dispatch || g_builtin
+  fi
 }
 
 function g_dispatch ()
@@ -660,7 +627,7 @@ function g_dispatch ()
 
   if g_findSubCommandScript "${1:-$c_default}"; then
 
-    [[ "$s_cmd" != _* ]] && [[ -z "${s_alias:-}" ]] && breadcrumbs="$breadcrumbs $s_cmd"
+    #[[ "$s_cmd" != _* ]] && breadcrumbs="$breadcrumbs ${s_alias:-$s_cmd}"
 
     g_unsetMetadata
     g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
@@ -673,7 +640,7 @@ function g_dispatch ()
     $DEFAULT && return 1
     $METADATAONLY && return 0
 
-    $LOUD && g_echo "Not Found: $breadcrumbs ${bold}${s_cmd}${reset}"
+    $LOUD && g_echo "Not Found: $breadcrumbs"
     exit 1
   fi
 }
@@ -722,6 +689,7 @@ function g_findSubCommandScript ()
     # if we were trying the default command and did not find it"
     s_type=""
     s_path=""
+    s_cmd=""
 
     return 1
   fi
@@ -732,75 +700,39 @@ function g_findSubCommandScript ()
   return 0
 }
 
-function g_listCmds()
+function g_listMatching ()
 {
-  g_parseScriptPath "$1"
-	local crumbs="$2"
-
- 	g_readConfig "${s_dir}" "${s_file}"
-
-	# Display the default sub-command at the top of  the list (without its breadcrumb)
-
-	local subs=()
-
-  for s_type in "${g_types[@]}"
+  local match="$1" crumbs="${2:-}"
+  local found=false
+  local type dir path
+  for type in "${g_types[@]}"
   do
-    for s_dir in "${g_locations[@]}"
+    for dir in "${g_locations[@]}"
     do
-      for s_path in "$s_dir/${c_default}.${s_type}."*
+      for path in "$dir"/$match.$type.*
       do
-        subs+=("$s_path")
-      done
-    done
-  done
-
-  for s_path in "${subs[@]}"
-  do
-    g_parseScriptPath "$s_path"
-
-    g_unsetMetadata
-    METADATAONLY=true g_executeScriptPath "$s_path"  
-
-    printf "%-${bw}s" "$crumbs"
-    print_command_list_description
-    printf "\n"
-  done
-
-  for s_type in "${g_types[@]}"
-  do
-
-    for s_dir in "${g_locations[@]}" ; do
-
-      #Display the c_cmds (with breadcrumb)
-      for s_path in "$s_dir"/[^_]*.${s_type}.*
-      do
-        g_parseScriptPath "$s_path"
-    
-        # commented out this if clause so as to include display of commands that go a level deeper
-        # these would not normally be included in the full recursive list of commands
-    
-        #if [[ -n "$s_cmd" ]] && [[ "$s_dest_subcmd_name" == *.${s_type}.* ]]; then
-  
-        if $VERBOSE || [[ "$s_type" == "${g_types[0]}" ]]; then
-
-          crumbs="$2 $s_cmd"
-
-          g_unsetMetadata
-          METADATAONLY=true g_executeScriptPath "$s_path"
-
-          printf "%-${bw}s" "$crumbs"
-
-          print_command_list_description
-
-          [[ "$s_type" != "${g_types[0]}" ]] && printf " ($s_type)"
-
-          echo
-
+        if [[ -f "$path" ]]; then
+          g_listEntry "$path" "$crumbs"
+          found=true
         fi
-
       done
     done
   done
+  [[ "$found" == true ]]
+}
+
+function g_listEntry ()
+{
+  g_unsetMetadata
+  unset s_alias
+  METADATAONLY=true g_executeScriptPath "$1" ""
+
+  [[ "$s_file" == _* ]] && return 0
+  s_cmd="${s_file%%.*}"
+  printf "%-${bw}s" "$2 ${s_alias:-$g_next}"
+  print_command_list_description
+  [[ "$type" != "${g_types[0]}" ]] && printf " ($type)"
+  echo
 }
 
 function g_builtin ()
@@ -828,15 +760,19 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 
   $METADATAONLY && return 0
 
-  g_declare_options LIST SHOW_TEMP SHOW_EXE INSTALL
-
-  LIST=true
+  g_declare_options LIST_ALL_CMD SHOW_TEMP SHOW_EXE INSTALL LIST_CMD=true
   install_as=""
 
   for arg in "${args[@]:+${args[@]}}"
   do
-    LIST=false
+    LIST_CMD=false
     case "$arg" in
+      --list)
+        LIST_CMD=true
+      ;;
+      --all | --list-all )
+        LIST_ALL_CMD=true
+      ;;
       --install=*)
         INSTALL=true
         install_as=${arg#--install=}
@@ -869,55 +805,28 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
     :
   fi
 
-  $LIST && g_listCommands
+  $LIST_CMD && print_command_description && g_listCmds "$breadcrumbs"
 
   exit 0
 }
 
-function g_listCommands ()
+function g_listCmds()
 {
-  # Display Command Description
-
-  print_command_description
-
-  # Display List
-
+	local crumbs="${1:-}"
   local bw=${breadcrumbs_width:-25}
-  c_file_list=()
-  crumbs_list=()
-
-  # start search at this level, not the top level
-  g_findCommands "$c_dir" "$c_file" "$breadcrumbs" false
-  
-  if $GDEBUG; then # print out results of recursive search
-    echo
-    for i in "${!c_file_list[@]}"; do    
-        printf "(%d) %-30s" "$i" "${crumbs_list[i]}"
-        echo "${c_file_list[i]}"
-    done
-    echo
-  fi
-
-  # only display our direct c_cmds (no need to loop)
-  i=0
-  #for i in "${!c_file_list[@]}"; do
-    displayName="${c_file_list[i]##*/}"
-    #echo "${bold}${displayName/-/ } commands:${reset}"
-    #echo "${bold}${g_dir##*/} commands:${reset}"
-    echo "${bold}${g_context} ${displayName} commands:${reset}"
+  local default=$(printf "%-${bw}s" "$crumbs"; print_command_list_description)
     
-    g_listCmds "${c_file_list[i]}" "${crumbs_list[i]}"
-    
-    echo
-  #done
+#  g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
+
+  g_listMatching "$c_default" "$crumbs" || echo "$default"
+  g_listMatching "*" "$crumbs"
 }
 
 ##############################################################
 # Parsing options the groan way - first initialize all flags
 #
-g_declare_options METADATAONLY SHOWHELP CONFIRM DRYRUN THEME
+g_declare_options METADATAONLY SHOWHELP CONFIRM DRYRUN=true THEME
 
-DRYRUN=true
 THEME="${THEME:-default}"
 
 ##############################################################
@@ -927,8 +836,7 @@ THEME="${THEME:-default}"
 # GDEBUG -GD Debug (for groan code)
 # XDEBUG -XD Bash shell debugging using set -x
 
-g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT LOUD DEFAULT
-LOUD=true
+g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT DEFAULT LOUD=true
 
 ##############################################################
 # Top level - universal options processing pattern
@@ -1015,14 +923,13 @@ done
 
 me "${BASH_SOURCE}" # tradition
 
-g_readConfig_TopLevel
-g_readConfig "$my_dir" "$my_file"
+g_readConfig_TopLevel && g_readConfig "$my_dir" "$my_file"
 
-[[ "$0" != "$BASH_SOURCE" ]] && return # only being sourced end it here
+[[ "$0" != "$BASH_SOURCE" ]] && return # being sourced, end it here
 
-g_shiftArgsInto_g_next && g_dispatch "$g_next" || g_dispatch || g_builtin
+g_nextDispatch
 
-$SHOWHELP &&  g_displayHelp
+$SHOWHELP && g_displayHelp
 
 :
 # "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php 
