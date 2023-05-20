@@ -492,30 +492,45 @@ function g_declare_options ()
   done
 }
 
+function _g_bashrc_ ()
+{
+  local name="$1" alias_text="$2"
+
+cat <<RCD
+alias $name='$alias_text' ##:$name:##
+${name} --autocomplete ##:$name:##
+RCD
+}
+
+function u_grepDeleteLines 	# in-place one liner
+{
+	{ \rm "$2" && grep -v "$1" > "$2" ; } < "$2" || true
+}
+
 function g_bashrc_install ()
 {
-	local tag="##:${1}:##" #1) tag
+  local name="$1"
   local dest="$2"        #2) dest file - "$HOME/.bashrc"
-  local line="$3"        #3) line to add
-  local wipfile="${g_tmp}/${2////-}"
-
+  local alias_text="$3"
+  local wip="${g_tmp}/${2////-}"
+  
   # backup
 	touch "$dest" 
-	cp "$dest" "$wipfile" || true
+	cp "$dest" "$wip" || true
 
-	$GDEBUG && g_echo "Before:" && cat "$wipfile"
+	$GDEBUG && g_echo "Before:" && cat "$wip"
 
-	# clean one liner
-	{ \rm "$wipfile" && grep -v "$tag" > "$wipfile" ; } < "$wipfile" || true
+	u_grepDeleteLines "##:$name:##" "$wip"
 
-	$GDEBUG && g_echo "Cleaned:" && cat "$wipfile" && echo
+	$GDEBUG && g_echo "Cleaned:" && cat "$wip" && echo
 
   # append
-	touch "$wipfile"
-	printf "%s %s\n" "$line" "$tag" >> "$wipfile"
+	touch "$wip"
+	_g_bashrc_ "$name" "$alias_text" >> "$wip"
 
-  $VERBOSE && g_echo "${dim}updating .bashrc${reset}" && cat "$wipfile" || true
-	$CONFIRM && cp "$wipfile" "$dest" || g_echo "DRY-RUN --confirm to apply"
+  $VERBOSE && g_echo "${dim}updating ${dest}${reset}" && cat "$wip" || true
+	$CONFIRM && cp "$wip" "$dest"
+  :
 }
 
 ##############################################################
@@ -780,11 +795,18 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       --install)
         INSTALL=true
       ;;
+      --uninstall)
+        $CONFIRM && u_grepDeleteLines "##:$g_file:##" "$HOME/.bashrc" || g_echo "DRY-RUN --confirm to apply"
+      ;;
       --temp)
         SHOW_TEMP=true
       ;;
       --which)
         SHOW_EXE=true
+      ;;
+      --autocomplete)
+        echo AUTOCOMPLETE ENABLED
+        complete -F g_autocomplete "$g_file"
       ;;
     esac
   done
@@ -793,21 +815,21 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
   $SHOW_EXE && echo "$g_path" && exit
 
   if $INSTALL; then
-    [[ -n ${CONFIG+x} ]] && with_config=" -C=$CONFIG"
+    local conf=""
+    [[ -n ${install_as} ]] && conf+=" ==g_file=${install_as}"
+    [[ -n ${CONFIG+x}   ]] && conf+=" --config=$CONFIG"
 
-    if [[ -n "${install_as}" ]]; then
-        g_bashrc_install "${install_as}" "$HOME/.bashrc" "alias ${install_as}='${g_path} ==g_file=${install_as}${with_config:-}'"
-    else
-        g_bashrc_install "$g_file" "$HOME/.bashrc" "alias ${g_file}='${g_path}${with_config:-}'"
-    fi
-
-    $CONFIRM && echo "To use the installed feature - start a new bash"
-    :
+    g_bashrc_install "${install_as:-$g_file}" "$HOME/.bashrc" "${g_path}${conf}"
+      
+    $CONFIRM \
+      && g_echo "To use the installed feature - start a new bash" \
+      || g_echo "DRY-RUN --confirm to apply"
+    
   fi
 
-  $LIST_CMD && print_command_description && g_listCmds "$breadcrumbs"
-
-  exit 0
+  if $LIST_CMD; then
+    print_command_description && g_listCmds "$breadcrumbs"
+  fi
 }
 
 function g_listCmds()
@@ -820,6 +842,19 @@ function g_listCmds()
 
   g_listMatching "$c_default" "$crumbs" || echo "$default"
   g_listMatching "*" "$crumbs"
+}
+
+function g_autocomplete () {
+  COMPREPLY=()
+  local word="${COMP_WORDS[COMP_CWORD]}"
+
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "$(sub commands)" -- "$word") )
+  else
+    local command="${COMP_WORDS[1]}"
+    local completions="$(sub completions "$command")"
+    COMPREPLY=( $(compgen -W "$completions" -- "$word") )
+  fi
 }
 
 ##############################################################
