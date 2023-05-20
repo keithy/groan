@@ -8,7 +8,7 @@ command="commands"
 description="list $c_file $command"
 
 #since help doesn't exec anything many common options don't apply
-options_common_vertical=\
+g_options_common_vertical=\
 "
 --theme=0                        alternate theme
 --install                        install as bash alias

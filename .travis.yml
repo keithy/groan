@@ -1,6 +1,0 @@
-# Uncomment to use
-#
-#language: bash
-#
-#script:
-#    - make -C tests

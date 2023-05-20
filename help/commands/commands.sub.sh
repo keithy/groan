@@ -7,7 +7,7 @@ me "$BASH_SOURCE" #tradition
 command="commands"
 description="full list of commands"
 #since help doesn't exec anything many common options don't apply
-options_="--theme=light    # alternate theme"
+g_options_="--theme=light    # alternate theme"
 
 usage=\
 "

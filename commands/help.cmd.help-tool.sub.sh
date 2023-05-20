@@ -29,7 +29,7 @@ g_debug_kv s_dest_path
 
 g_readConfig "$s_dest_path"
 
-g_shiftArgsInto_g_next
+g_shiftInto_g_next
  && g_dispatch "$g_next" || g_default
 
 # "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 

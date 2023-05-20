@@ -14,7 +14,7 @@ c_file_list=()
 crumbsList=()
 g_findCommands "${g_path}" "${g_file}"
 
-$GDEBUG && g_echo "${!c_file_list[@]}"
+$GDEBUG && p_echo "${!c_file_list[@]}"
 
 # get the cached version, the git version, use cache if git not working, if changed write cache
 function get_version()

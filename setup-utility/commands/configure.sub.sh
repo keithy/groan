@@ -61,7 +61,7 @@ done
  
 g_preset_match="${g_preset_match:-*.conf.sh}"
 
-function print_path ()
+function p_path ()
 {
     local path="$1" loc opt i title="${2:-Current setting}"
      
@@ -93,7 +93,7 @@ function foreach_config_do ()
     done
 }
 
-function print_location ()
+function p_location ()
 {
     local idx option="$2" path="$3" 
     (( idx = $1 + 1 ))
@@ -110,13 +110,13 @@ function print_location ()
     printf "  %d) %s\t${dim}[ %s ]${reset}\n" "$idx" "$option" "$path"
 }
 
-function print_config_name ()
+function p_config_name ()
 {
     local name="$2" 
     printf "              \t${name}\n"
 }
 
-function print_config_file ()
+function p_config_file ()
 {
     local name="$2" path="$3"
 
@@ -154,7 +154,7 @@ function foreach_preset_do ()
     done
 }
 
-function print_preset_name()
+function p_preset_name()
 {
     local category="$1" filename="$2" path="$3"
 
@@ -168,7 +168,7 @@ function print_preset_name()
     esac
 }
 
-function print_preset_file ()
+function p_preset_file ()
 {
     local category="$1" filename="$2" path="$3"
 
@@ -201,13 +201,13 @@ function install_preset_file ()
 if $SHOWOPTIONS; then
 
     printf "\nSelectable config options:\n"
-    foreach_config_do "*" print_config_name print_location
+    foreach_config_do "*" p_config_name p_location
 
     printf "\nInstallable preset files: (${g_preset_match})\n"
-    foreach_preset_do "*" print_preset_name
+    foreach_preset_do "*" p_preset_name
 
     echo
-    printf "Current setting: " ; print_path "${g_config:-none (no config) ($CONFIG not found)}"
+    printf "Current setting: " ; p_path "${g_config:-none (no config) ($CONFIG not found)}"
     echo
 fi
 
@@ -217,11 +217,11 @@ if $SHOWCONFIG; then
 
     match="${configure_name%.conf}"
 
-    foreach_config_do "$match" print_config_file || exit 0
+    foreach_config_do "$match" p_config_file || exit 0
 
     match="${configure_name%.conf.sh}"
 
-    foreach_preset_do "$match" print_preset_file || exit 0
+    foreach_preset_do "$match" p_preset_file || exit 0
 
     echo
     printf "Current setting: $CONFIG ($match.conf not found)"
@@ -237,7 +237,7 @@ if $EDITCONFIG; then
     foreach_config_do "$match" edit_config_file || exit 0
 
     echo
-    printf "Current setting: " ; print_path "${g_config:-$CONFIG ($CONFIG.conf not found)}"
+    printf "Current setting: " ; p_path "${g_config:-$CONFIG ($CONFIG.conf not found)}"
     echo
 
     exit 1
@@ -259,7 +259,7 @@ if $INSTALL; then
     foreach_preset_do "$match" install_preset_file || exit 0
 
     echo
-    printf "Current setting: " ; print_path "${g_config:-}"
+    printf "Current setting: " ; p_path "${g_config:-}"
     echo " (${bold}$match${reset} not found)"
 
     exit 1 
