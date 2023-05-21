@@ -61,27 +61,6 @@ function me () #BASH_SOURCE
   my_file="${my_path##*/}"
   my_dir="${my_path%/*}"
 }
- 
-##############################################################
-# A standard means for platform differentiation
-#
-u_PLATFORM="${BASH_VERSINFO[5]}" # || $OSTYPE
-
-##############################################################
-# Utility* to ensure that sudo is available
-#
-function g_needsSudo() {
-    local prompt
-    prompt=$(sudo -nv 2>&1)
-    if [ $? -eq 0 ]; then
-       $GDEBUG && p_echo "User has 'sudo' access."
-    elif p_echo "$prompt" | grep -q '^sudo:'; then
-       $GDEBUG && p_echo "User has sudo (password required)"
-    else
-       p_echo "this action requires 'sudo' access."
-       exit 1
-    fi
-}
 
 ##############################################################
 # Locations are the top level configuration for a command
@@ -260,6 +239,34 @@ function u_splitInto() {
 function u_define () { IFS='\n' read -r -d '' ${1} || true; }
 
 ##############################################################
+# A standard means for platform differentiation
+# OS        u_PLATFORM                 OSTYPE
+# MacOS X - x86_64-apple-darwin22.1.0  darwin22.1.0
+#
+u_PLATFORM="${BASH_VERSINFO[5]}" # || use $OSTYPE
+
+##############################################################
+# Ensure that sudo is available
+#
+function u_needsSudo() {
+    local prompt
+    prompt=$(sudo -nv 2>&1)
+    if [ $? -eq 0 ]; then
+       $GDEBUG && p_echo "User has 'sudo' access."
+    elif p_echo "$prompt" | grep -q '^sudo:'; then
+       $GDEBUG && p_echo "User has sudo (password required)"
+    else
+       p_echo "this action requires 'sudo' access."
+       exit 1
+    fi
+}
+
+function u_grepDeleteLines 	# in-place one liner
+{
+	{ \rm "$2" && grep -v "$1" > "$2" ; } < "$2" || true
+}
+
+##############################################################
 #
 function g_executeScriptPath ()
 {
@@ -391,23 +398,17 @@ function _p_description ()
 {
   [[ -z ${s_description+x} ]] && p_echo "command description is missing" && return 1
 
-  local desc="$s_description${NL}"
-
-  printf "${bold}"
-  _p_description_first_line
-  printf "${reset}"
-  printf "\n${reset}${desc#*$'\n'}"
+  p_embolden_first_line "${s_description:-}\n"
 }
 
 function p_description ()
 {
   _p_description
-  printf "${s_description+\n}"
 }
 
-function _p_description_first_line ()
+function p_first_line ()
 {
-    for line in $(printf "${s_description}")
+    for line in $(printf "$1")
     do
       printf "$line"
       return 0
@@ -416,7 +417,23 @@ function _p_description_first_line ()
 
 function p_command_list_description ()
 {
-  _p_description_first_line
+  p_first_line "${s_description}"
+}
+
+function p_embolden_first_line () # (ignores empty first line)
+{
+  local first=true
+  while read -r line
+  do
+    if $first; then
+      if [[ -n "$line" ]]; then
+        printf "$bold$line$reset\n"
+        first=false
+      fi
+    else
+      printf "$line\n"
+    fi
+  done <<<"$1"
 }
 
 function _p_options ()
@@ -475,8 +492,6 @@ function g_help ()
   return 0
 }
 
-##############################################################
-
 g_option_vars=()
 function g_declare_options ()
 {
@@ -496,11 +511,6 @@ cat <<RCD
 alias $name='$alias_text' ##:$name:##
 ${name} --autocomplete ##:$name:##
 RCD
-}
-
-function u_grepDeleteLines 	# in-place one liner
-{
-	{ \rm "$2" && grep -v "$1" > "$2" ; } < "$2" || true
 }
 
 function g_bashrc_install ()
@@ -839,7 +849,7 @@ function g_builtin ()
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
 "
---theme=0                        alternate theme
+--theme=off                      alternate theme
 --install                        install as bash alias
 --install=<name>                 install as bash alias <name>
 --install=<name> --config=<alt>  install with config <alt>
@@ -857,7 +867,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
   $METADATAONLY && return 0
 
   g_declare_options LIST_ALL_CMD SHOW_TEMP SHOW_EXE INSTALL LIST_CMD=true
-  install_as=""
+  local install_as=""
 
   for arg in "${args[@]:+${args[@]}}"
   do
@@ -909,11 +919,13 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
   fi
 
   if $LIST_CMD; then
-    p_command_description && g_listCmds "$breadcrumbs"
+    p_embolden_first_line "${c_description:-$c_description_default}\n" 
+    g_listCmds "$breadcrumbs"
   fi
 
   if $LIST_ALL_CMD; then
-    p_command_description && g_listCmdsAll "$breadcrumbs"
+     p_embolden_first_line "${c_description:-$c_description_default}"
+     g_listCmdsAll "$breadcrumbs"
   fi
 }
 
