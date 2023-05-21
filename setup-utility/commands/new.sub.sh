@@ -5,15 +5,15 @@
 #
 me "$BASH_SOURCE" #tradition
 command="new"
-description="create a new project/file structure from a template"
-options=\
+s_description="create a new project/file structure from a template"
+s_options=\
 "--options|--list    # list available templates
 --confirm            # not a dry run - perform action
 --template=<choice>  # selection (-t=<choice>)
 --<choice>           # selection (like cargo)
 --go-ahead           # allow copy into existing project"
  
-usage=\
+s_usage=\
 "$breadcrumbs                               # --list & --help
 $breadcrumbs --<template>                  # show template contents
 $breadcrumbs my-project --starter          # new project using 'starter' template
@@ -104,8 +104,8 @@ fi
 $NO_TRAMPLE && [[ -d "$targetPath" ]] && echo "$targetPath exists (--go-ahead) to populate existing directory" && exit 1
 
 # INSTALL
-r_options=""
-$VERBOSE && r_options="v"
+r_s_options=""
+$VERBOSE && r_s_options="v"
 
 $LOUD && echo "${bold}Creating new project using:${reset} $TEMPLATE"
 $LOUD && echo "rsync -rLtO${r_options}" "$templatePath" "$targetPath"

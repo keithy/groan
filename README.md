@@ -124,8 +124,8 @@ The help c_sub_cmd included provides:
 Commands are implemented expecting that they may be run with the METADATAONLY flag, in which case they populate variables and exit prior to doing anything:
 
 * `$command`
-* `$description`
-* `$usage`
+* `$s_description`
+* `$s_usage`
 
 ### Subcommand - environment
 

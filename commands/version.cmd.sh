@@ -5,8 +5,8 @@
 me "$BASH_SOURCE" #tradition #tradition
 
 command="version"
-description="versions according to git"
-usage="$breadcrumbs"
+s_description="versions according to git"
+s_usage="$breadcrumbs"
 
 $METADATAONLY && return 0
 

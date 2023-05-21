@@ -9,10 +9,10 @@ me "$BASH_SOURCE" #tradition
 # may have been invoked with a partial name
 # so set the full command name
 command="default"
-description="show topical help"
+s_description="show topical help"
 #since help doesn't exec anything many common options don't apply
 
-usage=\
+s_usage=\
 "
 ${breadcrumbs} <command|topic>
 ${breadcrumbs} commands

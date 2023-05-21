@@ -5,8 +5,8 @@
 $GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 command="self-install"
-description="install in system"
-usage="usage:
+s_description="install in system"
+s_usage="usage:
 $breadcrumbs self-install /usr/local/bin --link
 $breadcrumbs self-install --unlink"
 

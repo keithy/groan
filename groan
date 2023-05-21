@@ -105,7 +105,8 @@ function g_readConfig () # from conf files
   c_dirname="${s_dir##*/}"
  
   local commands_folder="${3:-commands}"
-
+  c_description_default="$g_context commands"
+  
   g_types=( cmd red wip obs )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
@@ -130,9 +131,9 @@ function g_readConfig () # from conf files
     ;;
   esac
 
-  g_config_file_options=("user" "context" "global")
+  g_config_file_s_options=("user" "context" "global")
   g_config_file_locations=(
-    "$HOME/.config/$g_dirname" # --user
+    "$HOME/.config/${g_dirname}" # --user
     "${g_dir}/../config"       # --context
     "${g_dir}/config"  	       # --global # installed in the code/config dir
   )
@@ -328,9 +329,8 @@ function _g_executeScriptPath ()
 # have knock on effects when collecting metatdata in command lists.
 function _g_unsetMetadata
 {
-  unset wip
-  unset description
-  unset g_next
+  unset s_description
+  unset s_cmd c_cmd s_file
 }
 
 # other commands can redefine this to add additional fields to unset
@@ -355,15 +355,15 @@ function g_pathScriptMappingArgs
 #
 # Help is in three parts: description, options, usage
 # Each has a main and supplementary
-#   - $description and $description_
-#   - $options     and $g_options_
-#   - $usage       and $usage_
+#   - $s_description and $s_description_
+#   - $s_options     and $g_options_
+#   - $s_usage       and $s_usage_
 #
 # Description - is displayed with the first line in bold
 # Options - section titled in bold 'options:'
 # Usage   - section titled in bold 'usage:'
 # 
-options=""; g_options_=""; usage=""; usage_=""
+s_options=""; g_options_=""; s_usage=""; s_usage_=""
 
 function g_displayHelp {
 
@@ -378,7 +378,7 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-$g_context commands\n\n}${reset}"
+  printf "${bold}${c_description:-$c_description_default\n\n}${reset}"
 }
 
 function p_command_description ()
@@ -389,9 +389,9 @@ function p_command_description ()
 
 function _p_description ()
 {
-  [[ -z ${description+x} ]] && p_echo "command description is missing" && return 1
+  [[ -z ${s_description+x} ]] && p_echo "command description is missing" && return 1
 
-  local desc="$description${NL}"
+  local desc="$s_description${NL}"
 
   printf "${bold}"
   _p_description_first_line
@@ -402,12 +402,12 @@ function _p_description ()
 function p_description ()
 {
   _p_description
-  printf "${description+\n}"
+  printf "${s_description+\n}"
 }
 
 function _p_description_first_line ()
 {
-    for line in $(printf "${description}")
+    for line in $(printf "${s_description}")
     do
       printf "$line"
       return 0
@@ -421,10 +421,10 @@ function p_command_list_description ()
 
 function _p_options ()
 {
-  if [[ -z "${options}" ]]; then
+  if [[ -z "${s_options}" ]]; then
     printf "${bold}options:${reset}%s" "${g_options_common_vertical}"
   else
-    printf "${bold}options:${reset}%s%s" "${g_options_common_horizontal}" "$options"  
+    printf "${bold}options:${reset}%s%s" "${g_options_common_horizontal}" "$s_options"  
   fi
   [[ -n ${g_options_+x} ]] && echo "${g_options_#*$'\n'}"
 
@@ -438,13 +438,13 @@ function p_options ()
 
 function _p_usage ()
 {
-  printf "${bold}usage:${reset}${usage}"
+  printf "${bold}usage:${reset}${s_usage}"
 }
 
 function p_usage ()
 {
   _p_usage
-  [[ -n ${usage_+x} ]] && printf "${usage_}"
+  [[ -n ${s_usage_+x} ]] && printf "${s_usage_}"
   return 0
 }
 
@@ -718,7 +718,7 @@ function g_matchingDo ()
           g_unsetMetadata
           unset s_alias
           METADATAONLY=true g_executeScriptPath "$path" ""
-          [[ "$s_file" != _* ]] && $fn "${@}" && found=true
+          $fn "${@}" && found=true
         fi
       done
     done
@@ -726,17 +726,57 @@ function g_matchingDo ()
   [[ "$found" == true ]]
 }
 
-function p_cmdEntry ()
-{  
-  printf "%-${bw}s" "${1} ${s_alias:-$g_next}"
+function g_eachSubMetaDo ()
+{
+  local filter="$1" ; shift 
+  local fn="$1" ; shift 
+  local found=false
+  local type dir path
+  for type in "${g_types[@]}"
+  do
+    for dir in "${g_locations[@]}"
+    do
+      for path in "$dir"/*.$type.*
+      do
+        if [[ -f "$path" ]]; then
+          g_unsetMetadata
+          unset s_alias g_next
+          METADATAONLY=true g_executeScriptPath "$path" ""
+          $filter && $fn "${@}" && found=true
+        fi
+      done
+    done
+  done
+  [[ "$found" == true ]]
+  return $?
+}
+
+function s_select ()
+{
+  [[ -z ${c_cmd+x} ]] && [[ -n ${s_cmd+x} ]]
+}
+
+function c_select ()
+{
+  [[ -n ${c_cmd+x} ]] && [[ "$c_cmd" == "$s_cmd" ]]
+}
+
+function p_scriptEntry ()
+{ 
+  p_c1 "${1} ${s_alias:-$g_next}"
   p_command_list_description
   [[ "$type" != "${g_types[0]}" ]] && printf " ($type)"
   echo
 }
 
-function p_cmdDefaultEntry ()
+function p_c1 ()
 {
   printf "%-${bw}s" "${1}"
+}
+
+function p_cmdDefaultEntry ()
+{
+  p_c1 "$1"
   p_command_list_description
   echo
 }
@@ -749,12 +789,17 @@ function g_listCmdsAll()
 
 function g_listCmds()
 {
-	local crumbs="${1:-}" bw=${breadcrumbs_width:-25}
+	local crumbs="${1:-}" 
+  local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
 
   g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
 
-  p_cmdDefaultEntry "$crumbs"
-  g_matchingDo "*" p_cmdEntry "$crumbs"
+  # p_cmdDefaultEntry "$crumbs"
+  p_c1 "$crumbs" ; echo "this list"
+  g_eachSubMetaDo c_select p_scriptEntry "$crumbs" || true
+  echo
+  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" || true
+  echo
 }
 
 function g_listSubCmds()
@@ -763,12 +808,15 @@ function g_listSubCmds()
 
   g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
 
-  g_matchingDo "*" p_sub "$crumbs"
+  g_eachSubMetaDo p_sub "$crumbs"
 }
 
 function p_sub ()
 {
-  echo "$@" "$s_file" "Next:${g_next:-}"
+  echo "args:" "$@"
+  p_kv c_cmd ${c_cmd:-}
+  p_kv s_cmd ${s_cmd:-}
+  p_kv s_path ${s_path:-} 
 }
 
 function g_autocomplete () {
@@ -786,7 +834,7 @@ function g_autocomplete () {
 
 function g_builtin ()
 {
-  description="list $c_file commands"
+  s_description="list $c_file commands"
 
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
@@ -799,7 +847,7 @@ function g_builtin ()
 --which                          print the code directory
 "
 
-  usage=\
+  s_usage=\
 "
 $breadcrumbs                        list commands
 $breadcrumbs --install              install as bash alias

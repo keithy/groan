@@ -6,8 +6,8 @@
 me "$BASH_SOURCE" #tradition
 
 command="deploy"
-description="deploy this command suite to remote hosts"
-usage=\
+s_description="deploy this command suite to remote hosts"
+s_usage=\
 "$breadcrumbs --hosts               # list configured hosts and their tags
 $breadcrumbs --tags=<a>,<b>         # select tagged hosts to deploy (if omitted - 'default')
 $breadcrumbs --confirm              # deploy for real
@@ -52,7 +52,7 @@ do
   esac
 done
  
-options=()
+s_options=()
 
 if $DRYRUN; then
   r_options+=('--dry-run')

@@ -6,8 +6,8 @@
 me "$BASH_SOURCE" #tradition
 
 command="deploy"
-description="execute commands on remote hosts"
-usage=\
+s_description="execute commands on remote hosts"
+s_usage=\
 "$breadcrumbs --hosts         # list configured hosts and their tags
 $breadcrumbs --tags=<a>,<b>  # select tagged hosts to execute on
 $breadcrumbs --help          # this message"
@@ -52,7 +52,7 @@ do
   shift
 done
  
-options=()
+s_options=()
 
 if $DRYRUN; then
   r_options+=('--dry-run')

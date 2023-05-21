@@ -4,13 +4,13 @@
 #
 me "$BASH_SOURCE" #tradition
 
-command="configure" ; description="select or edit configuration file"
-options=\
+command="configure" ; s_description="select or edit configuration file"
+s_options=\
 "
 --options        list options and presets
 --show           show current config file
 "
-usage=\
+s_usage=\
 "
 $breadcrumbs                                 # show current config file
 $breadcrumbs --show                          # show current config file
@@ -41,7 +41,7 @@ do
             SHOWCONFIG=false
         ;;
         --options)
-            SHOWOPTIONS=true
+            SHOWs_options=true
             SHOWCONFIG=false
         ;;
         --install=*)

@@ -5,8 +5,8 @@
 $GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 command="update"
-description="self-update ${g_file}"
-usage=\
+s_description="self-update ${g_file}"
+s_usage=\
 "$breadcrumbs                  # update tool data
 $breadcrumbs --code --confirm # update code"
 

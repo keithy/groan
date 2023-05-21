@@ -29,9 +29,9 @@ command="$s_sub_cmd"
 kind=${kind:-$command}
 test_search_root="${test_search_root:-${my_dir}/..}"
 
-description="run self-test kind=$kind"
+s_description="run self-test kind=$kind"
 
-usage="
+s_usage="
 $breadcrumbs --test=<suite>   run single suite
 $breadcrumbs --initialize     initializes test suites (doesnt run)
 $breadcrumbs --env            echo the environment
@@ -39,7 +39,7 @@ $breadcrumbs --ping <this>    echo <this>
 "
 
 # Our default metadata contribution to help
-options="
+s_options="
 --initialize | -i   initialize fixtures
 --list       | -l   list suites
 --kind=<type>       select specialised set of suites

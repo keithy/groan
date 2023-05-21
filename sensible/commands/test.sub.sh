@@ -6,8 +6,8 @@
 me "$BASH_SOURCE" #tradition
 
 command="test"
-description="test remote connections via ssh"
-usage=\
+s_description="test remote connections via ssh"
+s_usage=\
 "$breadcrumbs               # test ssh connections
 $breadcrumbs --help        # this message"
 
@@ -44,7 +44,7 @@ do
   esac
 done
  
-ssh_options=()
+ssh_s_options=()
 
 if $DRYRUN; then
   ssh_options+=('-n')

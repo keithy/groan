@@ -5,7 +5,7 @@
 me "$BASH_SOURCE" #tradition
 
 command="commands"
-description="list $c_file $command"
+s_description="list $c_file $command"
 
 #since help doesn't exec anything many common options don't apply
 g_options_common_vertical=\
@@ -18,7 +18,7 @@ g_options_common_vertical=\
 --which                          print the code directory
 "
 
-usage=\
+s_usage=\
 "
 $breadcrumbs                            list commands
 $breadcrumbs --install                  install as bash alias
@@ -150,7 +150,7 @@ function list_sub_cmds()
 		g_executeScriptPath "$s_path"  
 
 		printf "%-${bw}s" "$crumbs"
-		echo "$description"
+		echo "$s_description"
 	  done
 
 	for s_dir in "${g_locations[@]}" ; do

@@ -5,11 +5,11 @@
 me "$BASH_SOURCE" #tradition
 
 command="commands"
-description="full list of commands"
+s_description="full list of commands"
 #since help doesn't exec anything many common options don't apply
 g_options_="--theme=light    # alternate theme"
 
-usage=\
+s_usage=\
 "
 $breadcrumbs    # list commands
 "
@@ -38,7 +38,7 @@ function list_sub_cmds()
 			printf "%-30s" "$crumbs"
 			g_executeScriptPath "$s_path"  
 
-			echo "$description"
+			echo "$s_description"
 		  done
 		#fi
  done
@@ -66,7 +66,7 @@ local c_file="$1"
         printf "%-30s" "$crumbs"
         g_executeScriptPath "$s_path"  
 
-        echo "$description"
+        echo "$s_description"
       fi
     done
  done

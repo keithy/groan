@@ -7,8 +7,8 @@
 me "$BASH_SOURCE" #tradition
 
 command="test"
-description="dummy (test for duplication)"
-usage=\
+s_description="dummy (test for duplication)"
+s_usage=\
 "$breadcrumbs test"
 
 $METADATAONLY && return

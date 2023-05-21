@@ -7,8 +7,8 @@
 me "$BASH_SOURCE" #tradition
 
 command="environment"
-description="show script/environment variables"
-usage="usage:
+s_description="show script/environment variables"
+s_usage="usage:
 $breadcrumbs environment 
 $breadcrumbs environment [--all|-a]
 $breadcrumbs environment [--eval "expr"] - evaluate expression in script context

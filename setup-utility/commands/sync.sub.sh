@@ -11,13 +11,13 @@ The framework has many code files that should be identical:
 - highlight latest vs out of date code
 - --update brings all files up to date
 "
-options=\
+s_options=\
 "
 --groans              # show all groan code (default)
 --update [--confirm]  # update older files to latest code
 "
 
-usage=\
+s_usage=\
 "$breadcrumbs --groans        # show all check endpoints"
 
 $METADATAONLY && return
@@ -34,7 +34,7 @@ signature['Subcommand alias']="^# Subcommand Alias"
 signature['Test suite runner']="^# Script for running"
 signature['bash-spec']="^## BDD-style testing framework"
 signature['version.sub.sh']="^# groan version.sub.sh"
-signature['api.sub.sh']="^description=\"\$app raw api calls\""
+signature['api.sub.sh']="^s_description=\"\$app raw api calls\""
 signature['utils.sh']="^function json_pretty_print"
 
 SHOW_GROANS=true
