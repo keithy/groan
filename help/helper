@@ -143,8 +143,6 @@ function g_readConfig () # from conf files
 	  "${c_dir}/help"                  
   )
 
-  c_default="_default"
-
   #c_dir c_name globals used within <name>.conf file
 
   # If our context has a different name look for our configuration in these locations
@@ -380,7 +378,7 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-}${reset}"
+  printf "${bold}${c_description:-$g_context commands\n\n}${reset}"
 }
 
 function p_command_description ()
@@ -584,16 +582,17 @@ function g_view { # Check for Markdown Viewer other wise cat
 function g_shiftInto_g_next ()
 {
     g_next=""
-    local arg params=()
+    local arg params=() found=false
     if [[ "${#args[@]}" -gt 0  ]]; then
       for arg in "${args[@]}"
       do 
-        if [[ -z "$g_next" ]]; then
+        if ! $found; then
           if [[ "$arg" == '--' ]]; then
-            g_next="$c_default"
+            found=true
             continue
           elif [[ "${arg:0:1}" != "-" ]]; then
             g_next="$arg"
+            found=true
             continue
           fi
         fi
@@ -626,17 +625,14 @@ function g_nextDispatch ()
   if g_shiftInto_g_next; then
     breadcrumbs="${breadcrumbs} ${g_next}"
     g_dispatch "$g_next"
-  else
-    g_dispatch || g_builtin
+  else 
+    g_builtin
   fi
 }
 
 function g_dispatch ()
 {
-  local DEFAULT=false
-  [[ -z ${1+x} ]] && DEFAULT=true || DEFAULT=false
-
-  if g_findSubCommandScript "${1:-$c_default}"; then
+  if g_findSubCommandScript "${1}"; then
 
     g_unsetMetadata
     g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
@@ -645,9 +641,6 @@ function g_dispatch ()
     $METADATAONLY && return 0 || exit 0
   
   else # not found
-
-    $DEFAULT && return 1
-    $METADATAONLY && return 0
 
     $LOUD && p_echo "Not Found: $breadcrumbs"
     exit 1
@@ -760,8 +753,8 @@ function g_listCmds()
 
   g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
 
-  g_matchingDo "$c_default" p_cmdDefaultEntry "$crumbs" || p_cmdDefaultEntry "$crumbs"
-  g_matchingDo "*"          p_cmdEntry        "$crumbs"
+  p_cmdDefaultEntry "$crumbs"
+  g_matchingDo "*" p_cmdEntry "$crumbs"
 }
 
 function g_listSubCmds()
@@ -775,7 +768,7 @@ function g_listSubCmds()
 
 function p_sub ()
 {
-  echo "$@" "${g_next}"
+  echo "$@" "$s_file" "Next:${g_next:-}"
 }
 
 function g_autocomplete () {
@@ -804,7 +797,6 @@ function g_builtin ()
 --install=<name> --config=<alt>  install with config <alt>
 --temp                           print the temp directory
 --which                          print the code directory
---default                        override configured (c_default=$c_default)
 "
 
   usage=\
@@ -891,7 +883,7 @@ THEME="${THEME:-default}"
 # GDEBUG -GD Debug (for groan code)
 # XDEBUG -XD Bash shell debugging using set -x
 
-g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT DEFAULT LOUD=true
+g_declare_options XDEBUG DDEBUG DEBUG GDEBUG VERBOSE ENVIRONMENT LOUD=true
 
 ##############################################################
 # Top level - universal options processing pattern
@@ -932,9 +924,6 @@ do
       --help | -H | "-?")
         SHOWHELP=true
         METADATAONLY=true
-      ;;
-      --default | -L )
-        DEFAULT=true
       ;;
       --verbose | -V )
         GDEBUG=false
@@ -979,8 +968,6 @@ done
 me "${BASH_SOURCE}" # tradition
 
 g_readConfig_TopLevel && g_readConfig "$my_dir" "$my_file"
-
-$DEFAULT && c_default=_overriden_ # manual override
 
 [[ "$0" != "$BASH_SOURCE" ]] && return # being sourced, end it here
 
