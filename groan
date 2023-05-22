@@ -85,8 +85,8 @@ function g_readConfig () # from conf files
  
   local commands_folder="${3:-commands}"
   c_description_default="$g_context $c_cmd tool"
-  s_description_default="list $c_cmd commands"
-  
+  s_select="s_select_best"
+
   g_types=( cmd red wip obs )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
@@ -396,7 +396,7 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-$s_description_default\n\n}${reset}"
+  printf "${bold}${c_description:-$c_description_default\n\n}${reset}"
 }
 
 function p_command_description ()
@@ -407,7 +407,7 @@ function p_command_description ()
 
 function _p_description ()
 {
-  p_embolden_first_line "${c_description:-}\n"
+  p_embolden_first_line "${s_description:-s_cmd}\n"
 }
 
 function p_description ()
@@ -426,7 +426,7 @@ function p_first_line ()
 
 function p_command_list_description ()
 {
-  p_first_line "${s_description:-$s_description_default}"
+  p_first_line "${s_description:-$s_cmd}"
 }
 
 function p_embolden_first_line () # (ignores empty first line)
@@ -469,7 +469,7 @@ function p_options ()
 
 function _p_usage ()
 {
-  printf "${bold}usage:${reset}${s_usage}"
+  printf "${bold}usage:${reset}${s_usage:-\n$breadcrumbs}"
 }
 
 function p_usage ()
@@ -748,9 +748,14 @@ function g_eachSubMetaDo ()
   return $?
 }
 
-function s_select ()
+function s_select_all ()
 {
   [[ -z ${c_cmd+x} ]] && [[ -n ${s_cmd+x} ]]
+}
+
+function s_select_best ()
+{
+  s_select_all && { $VERBOSE || [[ "$type" == "${g_types[0]}" ]] } 
 }
 
 function c_select ()
@@ -789,13 +794,13 @@ function g_listCmds()
 	local crumbs="${1:-}" 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
  
-  p_embolden_first_line "${c_description:-$s_description_default}\n" 
+  p_embolden_first_line "${c_description:-$c_description_default}\n" 
 
   p_cmdDefaultEntry "$crumbs" " (this list)"  
   # p_c1 "$crumbs" ; echo "this list"
 
   g_eachSubMetaDo c_select p_scriptEntry "$crumbs" && echo || true
-  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
 }
 
 function g_listSubCmds()
@@ -812,7 +817,7 @@ function g_listSubCmds()
   p_description
 
   p_bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
 
@@ -832,7 +837,6 @@ function g_autocomplete () {
 function g_builtin ()
 {
   c_description="${c_description:-$c_description_default}"
-  s_description="${s_description:-$s_description_default}"
 
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
