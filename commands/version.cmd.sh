@@ -5,16 +5,13 @@
 me "$BASH_SOURCE" #tradition #tradition
 
 command="version"
-s_description="versions according to git"
-s_usage="$breadcrumbs"
+s_description="version according to git"
+s_usage=\
+"
+$breadcrumbs
+"
 
 $METADATAONLY && return 0
-
-c_file_list=()
-crumbsList=()
-g_findCommands "${g_path}" "${g_file}"
-
-$GDEBUG && p_echo "${!c_file_list[@]}"
 
 # get the cached version, the git version, use cache if git not working, if changed write cache
 function get_version()
@@ -37,15 +34,7 @@ function get_version()
 }
 
 # get the version of this sub-command's command (i.e. groan)
-get_version "$g_dir"
-
-for i in "${!c_file_list[@]}"
-do
-  # echo '>>' ${c_file_list[i]}
-  g_parseScriptPath "${c_file_list[i]}"
-  g_readConfig "$s_dir" "$s_file"
-  get_version "${s_dir}" "${crumbs_list[i]}"
-done
+get_version "$g_dir" "$g_file"
  
 exit 0
 

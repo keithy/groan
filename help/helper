@@ -5,7 +5,7 @@
 #                                        -- Martin Fowler
 #
 ##############################################################
-# The groan framework is implemented by one script < 700 loc.
+# The groan framework is implemented by one script < 800 loc.
 #
 # variable/function naming key:
 # g_ - groan/global
@@ -713,10 +713,7 @@ function g_findSubCommandScript ()
 
   if [ ${#found[@]} -eq 0 ]; then
     # if we were trying the default command and did not find it"
-    s_type=""
-    s_path=""
-    s_cmd=""
-
+    s_type="" ; s_path="" ; s_cmd="" ; s_dir=""
     return 1
   fi
   
@@ -724,30 +721,6 @@ function g_findSubCommandScript ()
   g_parseScriptPath "$s_path"
 
   return 0
-}
-
-function g_matchingDo ()
-{
-  local match="$1" ; shift
-  local fn="$1" ; shift 
-  local found=false
-  local type dir path
-  for type in "${g_types[@]}"
-  do
-    for dir in "${g_locations[@]}"
-    do
-      for path in "$dir"/$match.$type.*
-      do
-        if [[ -f "$path" ]]; then
-          g_unsetMetadata
-          unset s_alias
-          METADATAONLY=true g_executeScriptPath "$path" ""
-          $fn "${@}" && found=true
-        fi
-      done
-    done
-  done
-  [[ "$found" == true ]]
 }
 
 function g_eachSubMetaDo ()
@@ -834,7 +807,6 @@ function g_listSubCmds()
   u_includes list "$crumbs" && return 0
  
   list+=($crumbs)
-  g_parseScriptPath "$s_path"
   g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
 
   p_description
