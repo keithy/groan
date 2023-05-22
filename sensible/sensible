@@ -84,7 +84,8 @@ function g_readConfig () # from conf files
   c_dirname="${s_dir##*/}"
  
   local commands_folder="${3:-commands}"
-  c_description_default="$g_context commands"
+  c_description_default="$g_context $c_cmd tool"
+  s_description_default="list $c_cmd commands"
   
   g_types=( cmd red wip obs )
   
@@ -238,6 +239,16 @@ function u_splitInto() {
 #
 function u_define () { IFS='\n' read -r -d '' ${1} || true; }
 
+function u_includes ()
+{
+  declare -n arr="${1}"       # dynamically declare arr[] as a name ref to data_male[]
+
+  for ea in "${arr[@]}" ; do
+    [[ "$ea" == "$2" ]] && return 0
+  done
+  return 1
+}
+
 ##############################################################
 # A standard means for platform differentiation
 # OS        u_PLATFORM                 OSTYPE
@@ -336,7 +347,7 @@ function _g_executeScriptPath ()
 # have knock on effects when collecting metatdata in command lists.
 function _g_unsetMetadata
 {
-  unset s_description
+  unset s_description c_description
   unset s_cmd c_cmd s_file
 }
 
@@ -385,7 +396,7 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-$c_description_default\n\n}${reset}"
+  printf "${bold}${c_description:-$s_description_default\n\n}${reset}"
 }
 
 function p_command_description ()
@@ -396,9 +407,7 @@ function p_command_description ()
 
 function _p_description ()
 {
-  [[ -z ${s_description+x} ]] && p_echo "command description is missing" && return 1
-
-  p_embolden_first_line "${s_description:-}\n"
+  p_embolden_first_line "${c_description:-}\n"
 }
 
 function p_description ()
@@ -417,7 +426,7 @@ function p_first_line ()
 
 function p_command_list_description ()
 {
-  p_first_line "${s_description}"
+  p_first_line "${s_description:-$s_description_default}"
 }
 
 function p_embolden_first_line () # (ignores empty first line)
@@ -434,6 +443,11 @@ function p_embolden_first_line () # (ignores empty first line)
       printf "$line\n"
     fi
   done <<<"$1"
+}
+
+function p_bold ()
+{
+  printf "${bold}%s${reset}\n" "$($@)"
 }
 
 function _p_options ()
@@ -741,7 +755,7 @@ function g_eachSubMetaDo ()
   local filter="$1" ; shift 
   local fn="$1" ; shift 
   local found=false
-  local type dir path
+  local type s_dir path
   for type in "${g_types[@]}"
   do
     for dir in "${g_locations[@]}"
@@ -750,7 +764,7 @@ function g_eachSubMetaDo ()
       do
         if [[ -f "$path" ]]; then
           g_unsetMetadata
-          unset s_alias g_next
+          unset s_alias g_next s_path c_dir s_dir
           METADATAONLY=true g_executeScriptPath "$path" ""
           $filter && $fn "${@}" && found=true
         fi
@@ -774,6 +788,7 @@ function c_select ()
 function p_scriptEntry ()
 { 
   p_c1 "${1} ${s_alias:-$g_next}"
+  
   p_command_list_description
   [[ "$type" != "${g_types[0]}" ]] && printf " ($type)"
   echo
@@ -788,45 +803,45 @@ function p_cmdDefaultEntry ()
 {
   p_c1 "$1"
   p_command_list_description
-  echo
+  echo "${2:-}"
 }
 
-function g_listCmdsAll()
+function g_listCmdsAll ()
 {
-	#g_listCmds "$@"
-	g_listSubCmds "$@"
+	g_listSubCmds
 }
 
 function g_listCmds()
 {
 	local crumbs="${1:-}" 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
+ 
+  p_embolden_first_line "${c_description:-$s_description_default}\n" 
 
-  g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
+  p_cmdDefaultEntry "$crumbs" " (this list)"  
+  # p_c1 "$crumbs" ; echo "this list"
 
-  # p_cmdDefaultEntry "$crumbs"
-  p_c1 "$crumbs" ; echo "this list"
-  g_eachSubMetaDo c_select p_scriptEntry "$crumbs" || true
-  echo
-  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" || true
-  echo
+  g_eachSubMetaDo c_select p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
 }
 
 function g_listSubCmds()
 {
-	local crumbs="${1:-}" bw=${breadcrumbs_width:-25}
+  local crumbs
+  [[ -z ${1+z} ]] && list=() && crumbs="$c_cmd" || crumbs="$1 $c_cmd"
+  local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
 
+  u_includes list "$crumbs" && return 0
+ 
+  list+=($crumbs)
+  g_parseScriptPath "$s_path"
   g_readConfig_TopLevel && g_readConfig "$c_dir" "$c_file"
 
-  g_eachSubMetaDo p_sub "$crumbs"
-}
+  p_description
 
-function p_sub ()
-{
-  echo "args:" "$@"
-  p_kv c_cmd ${c_cmd:-}
-  p_kv s_cmd ${s_cmd:-}
-  p_kv s_path ${s_path:-} 
+  p_bold p_cmdDefaultEntry "$crumbs"
+  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
 
 function g_autocomplete () {
@@ -844,7 +859,8 @@ function g_autocomplete () {
 
 function g_builtin ()
 {
-  s_description="list $c_file commands"
+  c_description="${c_description:-$c_description_default}"
+  s_description="${s_description:-$s_description_default}"
 
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
@@ -918,15 +934,10 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
     
   fi
 
-  if $LIST_CMD; then
-    p_embolden_first_line "${c_description:-$c_description_default}\n" 
-    g_listCmds "$breadcrumbs"
-  fi
-
-  if $LIST_ALL_CMD; then
-     p_embolden_first_line "${c_description:-$c_description_default}"
-     g_listCmdsAll "$breadcrumbs"
-  fi
+  $LIST_CMD && g_listCmds "$breadcrumbs"
+  $LIST_ALL_CMD && g_listCmdsAll
+  
+  return 0
 }
 
 ##############################################################
@@ -957,23 +968,23 @@ do
         args+=( '--' "$@" )
         break
       ;;
-      ==*=*)
+      ==*=* )
         arg="${arg#==}"
         declare "${arg%%=*}"="${arg#*=}"
       ;;
-      ==*)
+      ==* )
         show_me_variable="${arg#==}"
       ;;
-      -DD|--ddebug|--deep-debug) 
+      -DD | --ddebug | --deep-debug) 
         DDEBUG=true
       ;;
-      -GD|--groan-debug)
+      -GD | --groan-debug)
         GDEBUG=true
         DEBUG=true
         VERBOSE=true
         LOUD=true
       ;;
-      -XD|--bash-debug)
+      -XD | --bash-debug)
         XDEBUG=true
       ;;
       -D | --debug)
@@ -981,7 +992,7 @@ do
         VERBOSE=true
         LOUD=true
       ;;
-      --help | -H | "-?")
+      --help | -H | '-?' )
         SHOWHELP=true
         METADATAONLY=true
       ;;
@@ -994,29 +1005,29 @@ do
       -EXIT=* )
         trap "g_onEXIT_${arg#-EXIT=}" EXIT
       ;;
-      --quiet | -Q)
+      --quiet | -Q )
         LOUD=false
         GDEBUG=false
         VERBOSE=false
       ;;
-      --dry-run | -N)
+      --dry-run | -N )
         DRYRUN=true
         CONFIRM=false
       ;;
-      --confirm| -Y)
+      --confirm| -Y )
         DRYRUN=false
         CONFIRM=true
       ;;
-      --config=*)
+      --config=* )
         CONFIG="${arg##--config=}"
       ;;
-      -C=*)
+      -C=* )
         CONFIG="${arg##-C=}"
       ;;
-      --theme=*)
+      --theme=* )
         THEME="${arg##--theme=}"
       ;;
-      *)
+      * )
         args+=("$arg")
       ;;
     esac
