@@ -149,7 +149,7 @@ function g_readConfig () # from conf files
 function g_readConfig_TopLevel () # parameters come from me() 
 {
   g_path="${my_path}"
-  g_home="$(p_dir "$g_path")"
+  g_home="$(p_dir "$my_dir")"
   g_dir="${my_dir}"
   g_dirname="${my_dir##*/}"
   [[ -z ${g_context+x} ]] && g_context="${g_dirname}"
@@ -386,7 +386,9 @@ s_options=""; g_options_=""; s_usage=""; s_usage_=""
 
 function g_displayHelp {
 
-  p_description
+  p_command_description
+
+  [[ -n ${s_description+x} ]] && p_description
 
   p_options
   
@@ -397,18 +399,18 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-$c_description_default\n\n}${reset}"
+  p_embolden_first_line "${c_description:-$c_description_default\n}"
 }
 
 function p_command_description ()
 {
   _p_command_description
-  printf "${c_description+\n\n}" # if the c_description is defined
+  printf "${c_description+\n}" # if the c_description is defined
 }
 
 function _p_description ()
 {
-  p_embolden_first_line "${s_description:-s_cmd}\n"
+  p_embolden_first_line "${s_description:-$s_cmd}\n"
 }
 
 function p_description ()
@@ -844,6 +846,7 @@ function g_builtin ()
 "
 --version                        git version
 --origin                         git repo
+--update                         git pull latest
 --theme=off                      alternate theme
 --install                        install as bash alias
 --install=<name>                 install as bash alias <name>

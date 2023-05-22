@@ -2,7 +2,7 @@ The groan framework is a basis for building complex hierarchical CLI interfaces 
 and aspires to achieve this with some degree of elegance, through hierarchical composition.
 
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE.md)
-[![Build Status](https://travis-ci.com/keithy/groan-dev.svg?branch=master)](https://travis-ci.com/keithy/groan-dev)
+[![Beta Status](https://gitlab.com/keithy/groan-dev/badges/beta/pipeline.svg)](https://gitlab.com/keithy/groan-dev/-/commits/beta)
 [![GitHub issues](https://img.shields.io/github/issues/keithy/groan.svg)](https://github.com/keithy/groan/issues)
 
 # Groan
@@ -46,8 +46,7 @@ new command. To contibute your command back submit a pull-request.
 
 This incarnation of groan was conceived in about 2009, in 2017 I used 'sub' extensively 
 and then fed that experience back into groan (in 2018), rather than port existing groan
-based projects. I also want to use groan as a base for incorporating "fish" based scripts
-if I should ever develop any.
+based projects. 
 
 ## Groan vs sub
 
@@ -61,7 +60,7 @@ if I should ever develop any.
 
 ## Features
 
-* supports default option flags (--verbose --quiet --help --debug --dry-run --confirm --ddebug)
+* supports default option flags (--verbose --quiet --help --debug --dry-run --confirm --groan-debug)
 * default means for platform determination
 * finds sub-commands via a configurable search path (allows local overides)
 * finds config files via a configurable search path
@@ -72,7 +71,6 @@ if I should ever develop any.
 * help included provides:
 	* list of help topics - `groan help topics` / `groan topics`
 	* list of commands and their usage - `groan help commands` / `groan commands`
-	* markdown viewer support
 	
 ## General Principles
 
@@ -88,32 +86,35 @@ Groan (sub)commands are called after having:
 * found and 'sourced' a config-file.
 * found and 'sourced' metadata (if separate).
 
+All subcommands support
+* --origin
+* --update
+* --install
+
 ## Config Files
 
 Groan looks for config files in a number of places. This can be configured in `groan.locations.sh`
 
 ```
-	"$g_working_dir/$c_file.conf"  # --local
-	"$HOME/.$c_file.conf"          # --user
-	"$c_dir/$c_file.conf"          # --global )
+	"$g_home/$c_file.conf"                       # --local
+	"$HOME/.config/<context_name>/default.conf"  # --user
 ```
 
 ## Sub-Commands
 
 ...follow the convention `commands/<c_sub_cmd>.sub.sh`
 
-* `<name>.sub.sh` will directly source the shell file <name>.cmd.sh
-* `<name>.sub.exec` will exec the <name>.cmd.exec
-* `<name>.sub.su` will sudo the <name>.cmd.exec
-* `<name>.sub.*` will eval the <name>.cmd.*
-	* `<name>.sub.rb`
-	* `<name>.sub.fish` ...etc
+* `<name>.cmd.sh` will directly source the shell file <name>.cmd.sh
+* `<name>.cmd.exec` will exec the <name>.cmd.exec
+* `<name>.cmd.su` will sudo the <name>.cmd.exec
+* `<name>.cmd.*` will eval the <name>.cmd.*
+	* `<name>.smd.rb`
 
-Non-shell scripts provide their help metadata via `<name>.meta.sh`
+Non-shell scripts provide their help metadata via `<name>.cmd.conf`
 
 ### Subcommand - help topics (provided by `helper`)
 
-The help c_sub_cmd included provides:
+The help sub-cmd included provides:
 
 * Display text file giving information on a topic e.g. `groan help topic test-topic`
 	* `<topicname>.topic.txt` e.g. `test-topic.topic.txt`    
@@ -123,15 +124,14 @@ The help c_sub_cmd included provides:
 
 Commands are implemented expecting that they may be run with the METADATAONLY flag, in which case they populate variables and exit prior to doing anything:
 
-* `$command`
 * `$s_description`
 * `$s_usage`
 
-### Subcommand - environment
+### Exit option - environment
 
-The environment c_sub_cmd prints out the environment variables (or evaluates a given expression) in the context of where scripts will run, after applying the config file.
+* `-EXIT=env`
 
-* `groan environment --eval "echo $PATH"`
+prints out the environment variables (or evaluates a given expression) in the context of where scripts ran
 
 ### Subcommand - configure
 
