@@ -898,6 +898,11 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
         printf "$g_home "
         p_bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
       ;;
+      --update )
+        $CONFIRM \
+          && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
+          || p_echo "DRY-RUN --confirm to apply"
+      ;;
       --autocomplete)
         echo AUTOCOMPLETE ENABLED
         complete -F g_autocomplete "$g_file"
