@@ -149,6 +149,7 @@ function g_readConfig () # from conf files
 function g_readConfig_TopLevel () # parameters come from me() 
 {
   g_path="${my_path}"
+  g_home="$(p_dir "$g_path")"
   g_dir="${my_dir}"
   g_dirname="${my_dir##*/}"
   [[ -z ${g_context+x} ]] && g_context="${g_dirname}"
@@ -187,7 +188,7 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
 function p_dir ()
 {
   local p_dir="${1/$PWD/\$PWD}"
-  p_dir="${p_dir/${g_dir}/\$g_dir}"
+  p_dir="${p_dir/${g_dir:-}/\$g_dir:-}"
   echo "${p_dir/$HOME/\$HOME}"
 }
 
@@ -841,6 +842,8 @@ function g_builtin ()
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
 "
+--version                        git version
+--origin                         git repo
 --theme=off                      alternate theme
 --install                        install as bash alias
 --install=<name>                 install as bash alias <name>
@@ -858,34 +861,42 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 
   $METADATAONLY && return 0
 
-  g_declare_options LIST_ALL_CMD SHOW_TEMP SHOW_EXE INSTALL LIST_CMD=true
+  g_declare_options LIST_ALL_CMD INSTALL LIST_CMD=true
   local install_as=""
 
   for arg in "${args[@]:+${args[@]}}"
   do
     LIST_CMD=false
     case "$arg" in
-      --list)
+      --list )
         LIST_CMD=true
       ;;
       --all | --list-all )
         LIST_ALL_CMD=true
       ;;
-      --install=*)
+      --install=* )
         INSTALL=true
         install_as=${arg#--install=}
       ;;
-      --install)
+      --install )
         INSTALL=true
       ;;
-      --uninstall)
+      --uninstall )
         $CONFIRM && u_grepDeleteLines "##:$g_file:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
       ;;
-      --temp)
-        SHOW_TEMP=true
+      --temp )
+        echo "$g_tmp"
       ;;
-      --which)
-        SHOW_EXE=true
+      --which )
+        echo "$g_path"
+      ;;
+      --version )
+        printf "$g_home "
+        p_bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
+      ;;
+      --origin )
+        printf "$g_home "
+        p_bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
       ;;
       --autocomplete)
         echo AUTOCOMPLETE ENABLED
@@ -893,9 +904,6 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       ;;
     esac
   done
-
-  $SHOW_TEMP && echo "$g_tmp" && exit
-  $SHOW_EXE && echo "$g_path" && exit
 
   if $INSTALL; then
     local conf=""
