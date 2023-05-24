@@ -80,6 +80,7 @@ function g_readConfig () # from conf files
 
   c_dir="$s_dir"
   c_file="$s_file"
+  c_path="$s_path"
   c_cmd="$s_cmd"
   c_dirname="${s_dir##*/}"
  
@@ -91,7 +92,7 @@ function g_readConfig () # from conf files
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
   #git bash has /tmp
-  #[[ "$g_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
+  #[[ "$u_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
 
   bold=$'\e[1m'      # Style Bold
   dim=$'\e[2m'       # Style Dim
@@ -111,8 +112,8 @@ function g_readConfig () # from conf files
     ;;
   esac
 
-  g_config_file_s_options=("user" "context" "global")
-  g_config_file_locations=(
+  g_config_path_file_s_options=("user" "context" "global")
+  g_config_path_file_locations=(
     "$HOME/.config/${g_dirname}" # --user
     "${g_dir}/../config"       # --context
     "${g_dir}/config"  	       # --global # installed in the code/config dir
@@ -137,10 +138,12 @@ function g_readConfig () # from conf files
   #g_find_ "Locations" ".${c_file}.conf" "${c_dir}" && source "$g_found"
 
   # Obtain values from...
-  if g_find_ Config "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
+  if g_find_ Config "${CONFIG:-default}.conf" "${g_config_path_file_locations[@]}"
   then
-    g_config="${g_found}"
-    source "${g_config}"
+    g_config_path="${g_found}"
+    g_config="${g_found##*/}"
+    g_config="${g_config%.conf}" 
+    source "${g_config_path}"
   fi
 
   return 0
@@ -160,13 +163,13 @@ function g_readConfig_TopLevel () # parameters come from me()
 }
 
 ##############################################################
-# search g_config_file_locations set in g_readConfig
+# search g_config_path_file_locations set in g_readConfig
 # find a <filename>
 #
 
 function g_find () #1) type_string #2) filename #) dirs to look
 {
-  g_find_ "$@" "${g_config_file_locations[@]}" && return 0 || return 1
+  g_find_ "$@" "${g_config_path_file_locations[@]}" && return 0 || return 1
 }
 
 function g_find_ () #1) type_string #2) filename #) dirs to look
@@ -448,9 +451,11 @@ function p_embolden_first_line () # (ignores empty first line)
   done <<<"$1"
 }
 
-function p_bold ()
+function be ()
 {
-  printf "${bold}%s${reset}\n" "$($@)"
+  local emphasis="$1"
+  shift
+  $LOUD && printf "${!emphasis}%s${reset}\n" "$($@)" || printf "" "$($@)"
 }
 
 function _p_options ()
@@ -495,7 +500,7 @@ function g_debug_kv ()
 }
 
 function p_echo () {
-  >&2 echo "$@" # or { printf "%s\n" "$*" >&2; }
+  >&2 $LOUD && echo "$@" # or { printf "%s\n" "$*" >&2; }
 }
 
 # loads a help variable
@@ -649,6 +654,7 @@ function g_aliasDispatch ()
 
 function g_nextDispatch ()
 {
+
   if g_shiftInto_g_next; then
     breadcrumbs="${breadcrumbs} ${g_next}"
     g_dispatch "$g_next"
@@ -799,6 +805,7 @@ function g_listCmds()
  
   p_embolden_first_line "${c_description:-$c_description_default}\n" 
 
+  be bold echo "commands:"
   p_cmdDefaultEntry "$crumbs" " (this list)"  
   # p_c1 "$crumbs" ; echo "this list"
 
@@ -819,7 +826,7 @@ function g_listSubCmds()
 
   p_description
 
-  p_bold p_cmdDefaultEntry "$crumbs"
+  be bold p_cmdDefaultEntry "$crumbs"
   g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
@@ -895,11 +902,11 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       ;;
       --version )
         printf "$g_home "
-        p_bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
+        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
       ;;
       --origin )
         printf "$g_home "
-        p_bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
+        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
       ;;
       --update )
         $CONFIRM \
