@@ -80,18 +80,19 @@ function g_readConfig () # from conf files
 
   c_dir="$s_dir"
   c_file="$s_file"
+  c_path="$s_path"
   c_cmd="$s_cmd"
   c_dirname="${s_dir##*/}"
  
   local commands_folder="${3:-commands}"
   c_description_default="$g_context $c_cmd tool"
-  s_description_default="list $c_cmd commands"
-  
+  s_select="s_select_best"
+
   g_types=( cmd red wip obs )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
   #git bash has /tmp
-  #[[ "$g_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
+  #[[ "$u_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
 
   bold=$'\e[1m'      # Style Bold
   dim=$'\e[2m'       # Style Dim
@@ -139,8 +140,10 @@ function g_readConfig () # from conf files
   # Obtain values from...
   if g_find_ Config "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
   then
-    g_config="${g_found}"
-    source "${g_config}"
+    g_config_path="${g_found}"
+    g_config="${g_found##*/}"
+    g_config="${g_config%.conf}" 
+    source "${g_config_path}"
   fi
 
   return 0
@@ -149,6 +152,7 @@ function g_readConfig () # from conf files
 function g_readConfig_TopLevel () # parameters come from me() 
 {
   g_path="${my_path}"
+  g_home="$(p_dir "$my_dir")"
   g_dir="${my_dir}"
   g_dirname="${my_dir##*/}"
   [[ -z ${g_context+x} ]] && g_context="${g_dirname}"
@@ -184,11 +188,19 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
     return 1 # no file found
 }
 
+function p_configs () #1) match #2) array_name 3) fn to call
+{
+  for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
+  do
+    echo ${each##*/}
+  done
+}
+
 function p_dir ()
 {
   local p_dir="${1/$PWD/\$PWD}"
-  p_dir="${p_dir/${g_dir}/\$g_dir}"
-  echo "${p_dir/$HOME/\$HOME}"
+  p_dir="${p_dir/${g_dir:-}/\$g_dir:-}"
+  printf "${p_dir/$HOME/\$HOME}"
 }
 
 ##############################################################
@@ -385,7 +397,9 @@ s_options=""; g_options_=""; s_usage=""; s_usage_=""
 
 function g_displayHelp {
 
-  p_description
+  p_command_description
+
+  [[ -n ${s_description+x} ]] && p_description
 
   p_options
   
@@ -396,18 +410,18 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  printf "${bold}${c_description:-$s_description_default\n\n}${reset}"
+  p_embolden_first_line "${c_description:-$c_description_default\n}"
 }
 
 function p_command_description ()
 {
   _p_command_description
-  printf "${c_description+\n\n}" # if the c_description is defined
+  printf "${c_description+\n}" # if the c_description is defined
 }
 
 function _p_description ()
 {
-  p_embolden_first_line "${c_description:-}\n"
+  p_embolden_first_line "${s_description:-$s_cmd}\n"
 }
 
 function p_description ()
@@ -426,7 +440,7 @@ function p_first_line ()
 
 function p_command_list_description ()
 {
-  p_first_line "${s_description:-$s_description_default}"
+  p_first_line "${s_description:-$s_cmd}"
 }
 
 function p_embolden_first_line () # (ignores empty first line)
@@ -445,9 +459,11 @@ function p_embolden_first_line () # (ignores empty first line)
   done <<<"$1"
 }
 
-function p_bold ()
+function be ()
 {
-  printf "${bold}%s${reset}\n" "$($@)"
+  local emphasis="$1"
+  shift
+  $LOUD && printf "${!emphasis}%s${reset}\n" "$($@)" || printf "" "$($@)"
 }
 
 function _p_options ()
@@ -469,7 +485,7 @@ function p_options ()
 
 function _p_usage ()
 {
-  printf "${bold}usage:${reset}${s_usage}"
+  printf "${bold}usage:${reset}${s_usage:-\n$breadcrumbs}"
 }
 
 function p_usage ()
@@ -492,7 +508,7 @@ function g_debug_kv ()
 }
 
 function p_echo () {
-  >&2 echo "$@" # or { printf "%s\n" "$*" >&2; }
+  >&2 $LOUD && echo "$@" # or { printf "%s\n" "$*" >&2; }
 }
 
 # loads a help variable
@@ -523,7 +539,7 @@ function _g_bashrc_ ()
 
 cat <<RCD
 alias $name='$alias_text' ##:$name:##
-${name} --autocomplete ##:$name:##
+complete -C "${name} --autocomplete" $name ##:$name:##
 RCD
 }
 
@@ -646,6 +662,7 @@ function g_aliasDispatch ()
 
 function g_nextDispatch ()
 {
+
   if g_shiftInto_g_next; then
     breadcrumbs="${breadcrumbs} ${g_next}"
     g_dispatch "$g_next"
@@ -748,9 +765,14 @@ function g_eachSubMetaDo ()
   return $?
 }
 
-function s_select ()
+function s_select_all ()
 {
   [[ -z ${c_cmd+x} ]] && [[ -n ${s_cmd+x} ]]
+}
+
+function s_select_best ()
+{
+  s_select_all && { $VERBOSE || [[ "$type" == "${g_types[0]}" ]] } 
 }
 
 function c_select ()
@@ -789,13 +811,14 @@ function g_listCmds()
 	local crumbs="${1:-}" 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
  
-  p_embolden_first_line "${c_description:-$s_description_default}\n" 
+  p_embolden_first_line "${c_description:-$c_description_default}\n" 
 
+  be bold echo "commands:"
   p_cmdDefaultEntry "$crumbs" " (this list)"  
   # p_c1 "$crumbs" ; echo "this list"
 
   g_eachSubMetaDo c_select p_scriptEntry "$crumbs" && echo || true
-  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
 }
 
 function g_listSubCmds()
@@ -811,8 +834,8 @@ function g_listSubCmds()
 
   p_description
 
-  p_bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo s_select p_scriptEntry "$crumbs" && echo || true
+  be bold p_cmdDefaultEntry "$crumbs"
+  g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
 
@@ -832,11 +855,13 @@ function g_autocomplete () {
 function g_builtin ()
 {
   c_description="${c_description:-$c_description_default}"
-  s_description="${s_description:-$s_description_default}"
 
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
 "
+--version                        git version
+--origin                         git repo
+--update                         git pull latest
 --theme=off                      alternate theme
 --install                        install as bash alias
 --install=<name>                 install as bash alias <name>
@@ -854,34 +879,50 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 
   $METADATAONLY && return 0
 
-  g_declare_options LIST_ALL_CMD SHOW_TEMP SHOW_EXE INSTALL LIST_CMD=true
+  g_declare_options LIST_ALL_CMD INSTALL LIST_CMD=true
   local install_as=""
 
   for arg in "${args[@]:+${args[@]}}"
   do
     LIST_CMD=false
     case "$arg" in
-      --list)
+      --list )
         LIST_CMD=true
       ;;
       --all | --list-all )
         LIST_ALL_CMD=true
       ;;
-      --install=*)
+      --install=* )
         INSTALL=true
         install_as=${arg#--install=}
       ;;
-      --install)
+      --install )
         INSTALL=true
       ;;
-      --uninstall)
+      --uninstall )
         $CONFIRM && u_grepDeleteLines "##:$g_file:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
       ;;
-      --temp)
-        SHOW_TEMP=true
+      --temp )
+        echo "$g_tmp"
       ;;
-      --which)
-        SHOW_EXE=true
+      --which )
+        echo "$g_path"
+      ;;
+      --version )
+        printf "$g_home "
+        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
+      ;;
+      --origin )
+        printf "$g_home "
+        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
+      ;;
+      --update )
+        $CONFIRM \
+          && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
+          || p_echo "DRY-RUN --confirm to apply"
+      ;;
+      --configs )
+          p_configs
       ;;
       --autocomplete)
         echo AUTOCOMPLETE ENABLED
@@ -889,9 +930,6 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       ;;
     esac
   done
-
-  $SHOW_TEMP && echo "$g_tmp" && exit
-  $SHOW_EXE && echo "$g_path" && exit
 
   if $INSTALL; then
     local conf=""

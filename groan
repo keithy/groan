@@ -112,8 +112,8 @@ function g_readConfig () # from conf files
     ;;
   esac
 
-  g_config_path_file_s_options=("user" "context" "global")
-  g_config_path_file_locations=(
+  g_config_file_s_options=("user" "context" "global")
+  g_config_file_locations=(
     "$HOME/.config/${g_dirname}" # --user
     "${g_dir}/../config"       # --context
     "${g_dir}/config"  	       # --global # installed in the code/config dir
@@ -138,7 +138,7 @@ function g_readConfig () # from conf files
   #g_find_ "Locations" ".${c_file}.conf" "${c_dir}" && source "$g_found"
 
   # Obtain values from...
-  if g_find_ Config "${CONFIG:-default}.conf" "${g_config_path_file_locations[@]}"
+  if g_find_ Config "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
   then
     g_config_path="${g_found}"
     g_config="${g_found##*/}"
@@ -163,13 +163,13 @@ function g_readConfig_TopLevel () # parameters come from me()
 }
 
 ##############################################################
-# search g_config_path_file_locations set in g_readConfig
+# search g_config_file_locations set in g_readConfig
 # find a <filename>
 #
 
 function g_find () #1) type_string #2) filename #) dirs to look
 {
-  g_find_ "$@" "${g_config_path_file_locations[@]}" && return 0 || return 1
+  g_find_ "$@" "${g_config_file_locations[@]}" && return 0 || return 1
 }
 
 function g_find_ () #1) type_string #2) filename #) dirs to look
@@ -188,11 +188,19 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
     return 1 # no file found
 }
 
+function p_configs () #1) match #2) array_name 3) fn to call
+{
+  for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
+  do
+    echo ${each##*/}
+  done
+}
+
 function p_dir ()
 {
   local p_dir="${1/$PWD/\$PWD}"
   p_dir="${p_dir/${g_dir:-}/\$g_dir:-}"
-  echo "${p_dir/$HOME/\$HOME}"
+  printf "${p_dir/$HOME/\$HOME}"
 }
 
 ##############################################################
@@ -531,7 +539,7 @@ function _g_bashrc_ ()
 
 cat <<RCD
 alias $name='$alias_text' ##:$name:##
-${name} --autocomplete ##:$name:##
+complete -C "${name} --autocomplete" $name ##:$name:##
 RCD
 }
 
@@ -912,6 +920,9 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
         $CONFIRM \
           && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
           || p_echo "DRY-RUN --confirm to apply"
+      ;;
+      --configs )
+          p_configs
       ;;
       --autocomplete)
         echo AUTOCOMPLETE ENABLED
