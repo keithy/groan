@@ -63,7 +63,7 @@ function me () #BASH_SOURCE
 }
 
 ##############################################################
-# Locations are the top level configuration for a command
+# Custom are the top level configuration for a command
 # they set where to find everything else, including config
 # defaults are set here, and each executable may have a
 # <exe>.conf (or perhaps a hidden .<exe>.conf)
@@ -86,9 +86,9 @@ function g_readConfig () # from conf files
  
   local commands_folder="${3:-commands}"
   c_description_default="$g_context $c_cmd tool"
-  s_select="s_select_best"
+  s_select="${s_select:-s_select_best}" # set if not set
 
-  g_types=( cmd red wip obs )
+  g_types=( cmd red wip obs test spec )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
   #git bash has /tmp
@@ -129,13 +129,13 @@ function g_readConfig () # from conf files
 
   # If our context has a different name look for our configuration in these locations
   # [[ "$c_file" != "$c_dirname" ]] && \
-  g_find_ "Locations1" "${c_file}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
+  g_find_ "Custom1" "${c_file}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
   
   # Look for our context defined configuration in these locations
-  g_find "Locations2" "${c_dirname}.conf" && source "$g_found"
+  g_find "Custom2" "${c_dirname}.conf" && source "$g_found"
     
   # in preference to a hidden personal locations file
-  #g_find_ "Locations" ".${c_file}.conf" "${c_dir}" && source "$g_found"
+  #g_find_ "Custom" ".${c_file}.conf" "${c_dir}" && source "$g_found"
 
   # Obtain values from...
   if g_find_ Config "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
@@ -188,11 +188,11 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
     return 1 # no file found
 }
 
-function p_configs () #1) match #2) array_name 3) fn to call
+function p_configs ()
 {
   for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
   do
-    echo ${each##*/}
+    echo "${each##*/}"
   done
 }
 
@@ -536,10 +536,10 @@ function g_declare_options ()
 function _g_bashrc_ ()
 {
   local name="$1" alias_text="$2"
-
 cat <<RCD
-alias $name='$alias_text' ##:$name:##
-complete -C "${name} --autocomplete" $name ##:$name:##
+alias $name='${alias_text}' ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- -=AUTO) ); } ##:$name:##
+complete -F _ac_$name ${name}          ##:$name:##
 RCD
 }
 
@@ -839,17 +839,9 @@ function g_listSubCmds()
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
 
-function g_autocomplete () {
-  COMPREPLY=()
-  local word="${COMP_WORDS[COMP_CWORD]}"
-
-  if [ "$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( $(compgen -W "$(sub commands)" -- "$word") )
-  else
-    local command="${COMP_WORDS[1]}"
-    local completions="$(sub completions "$command")"
-    COMPREPLY=( $(compgen -W "$completions" -- "$word") )
-  fi
+function g_autoComplete()
+{
+ compgen -W "$breadcrumbs" -- ${g_file}
 }
 
 function g_builtin ()
@@ -859,15 +851,17 @@ function g_builtin ()
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
 "
+--theme=off                      alternate theme
 --version                        git version
 --origin                         git repo
 --update                         git pull latest
---theme=off                      alternate theme
---install                        install as bash alias
+--temp                           the temp directory
+--which                          path of the executable
+
+--install | --uninstall          install as bash alias
 --install=<name>                 install as bash alias <name>
 --install=<name> --config=<alt>  install with config <alt>
---temp                           print the temp directory
---which                          print the code directory
+--configs                        list available config files
 "
 
   s_usage=\
@@ -924,9 +918,9 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       --configs )
           p_configs
       ;;
-      --autocomplete)
-        echo AUTOCOMPLETE ENABLED
-        complete -F g_autocomplete "$g_file"
+      -=AUTO )
+        g_autoComplete "${args[@]:+${args[@]}}"
+        exit 0
       ;;
     esac
   done
@@ -936,7 +930,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
     [[ -n ${install_as} ]] && conf+=" ==g_file=${install_as}"
     [[ -n ${CONFIG+x}   ]] && conf+=" --config=$CONFIG"
 
-    g_bashrc_install "${install_as:-$g_file}" "$HOME/.bashrc" "${g_path}${conf}"
+    g_bashrc_install "${install_as:-$g_file}" "$HOME/.bashrc" "${g_path/$HOME/\$HOME}${conf}"
       
     $CONFIRM \
       && p_echo "To use the installed feature - start a new bash" \

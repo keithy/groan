@@ -26,7 +26,7 @@ $METADATAONLY && return
 declare -A signature
 
 #The signatures below must have ^ otherwise this file will be a false positive
-signature['Main executable']="^function g_readLocations"
+signature['Main executable']="^function g_readCustom"
 signature['Dispatcher']="^# This g_dispatcher"
 signature['List commands']="^# groan single command list"
 signature['Test all suites runner']="^# groan test.sub.sh"
