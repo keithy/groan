@@ -413,12 +413,12 @@ function g_displayHelp {
 function _p_command_description ()
 {
   p_embolden_first_line "${c_description}"
+  printf "${c_description_:-}${c_description_+\n}"
 }
 
 function p_command_description ()
 {
   _p_command_description
-  printf "${c_description+\n}" # if the c_description is defined
 }
 
 function _p_description ()
@@ -812,8 +812,9 @@ function g_listCmds()
 	local crumbs="${1:-}" 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
  
-  p_embolden_first_line "${c_description}\n" 
-
+  #p_embolden_first_line "${c_description}\n" 
+  p_command_description
+  
   be bold echo "commands:"
   p_cmdDefaultEntry "$crumbs" " (this list)"  
   # p_c1 "$crumbs" ; echo "this list"
