@@ -57,7 +57,7 @@ NL=$'\n' # Just useful
 function me () #BASH_SOURCE
 {
   $GDEBUG && printf "\e[2m${1}\e[0m\n" # dim
-  my_path=$(realpath "${1}")
+  my_path=$(realpath -s "${1}")
   my_file="${my_path##*/}"
   my_dir="${my_path%/*}"
 }
@@ -81,11 +81,11 @@ function g_readConfig () # from conf files
   c_dir="$s_dir"
   c_file="$s_file"
   c_path="$s_path"
-  c_cmd="$s_cmd"
+  [[ "$s_cmd" == "$g_file" ]] && c_cmd="$g_cmd" && s_cmd="$g_cmd" ||  c_cmd="${s_cmd}"
   c_dirname="${s_dir##*/}"
  
   local commands_folder="${3:-commands}"
-  c_description_default="$g_context $c_cmd tool"
+  c_description_default="$g_context ${c_cmd} tool"
   s_select="${s_select:-s_select_best}" # set if not set
 
   g_types=( cmd red wip obs test spec )
@@ -112,7 +112,7 @@ function g_readConfig () # from conf files
     ;;
   esac
 
-  g_config_file_s_options=("user" "context" "global")
+  g_config_file_options=("user" "context" "global")
   g_config_file_locations=(
     "$HOME/.config/${g_dirname}" # --user
     "${g_dir}/../config"       # --context
@@ -146,6 +146,8 @@ function g_readConfig () # from conf files
     source "${g_config_path}"
   fi
 
+  c_description="${c_description:-$c_description_default}"
+
   return 0
 }
 
@@ -156,10 +158,11 @@ function g_readConfig_TopLevel () # parameters come from me()
   g_dir="${my_dir}"
   g_dirname="${my_dir##*/}"
   [[ -z ${g_context+x} ]] && g_context="${g_dirname}"
-  g_file="${g_file:-$my_file}" # allows runtime override via ==g_file=toolname
+  g_file="${my_file}" # backup for when g_cmd is overriden
+  g_cmd="${g_cmd:-$my_file}" # allows runtime override via ==g_cmd=toolname
 
   g_options_common_vertical+="${NL}--theme=neon             select an alternate colour theme"
-  breadcrumbs="${g_file}"
+  breadcrumbs="${g_cmd}"
 }
 
 ##############################################################
@@ -359,8 +362,7 @@ function _g_executeScriptPath ()
 # have knock on effects when collecting metatdata in command lists.
 function _g_unsetMetadata
 {
-  unset s_description c_description
-  unset s_cmd c_cmd s_file
+  unset s_description s_cmd c_cmd s_file
 }
 
 # other commands can redefine this to add additional fields to unset
@@ -410,7 +412,7 @@ function g_displayHelp {
 
 function _p_command_description ()
 {
-  p_embolden_first_line "${c_description:-$c_description_default\n}"
+  p_embolden_first_line "${c_description}"
 }
 
 function p_command_description ()
@@ -662,7 +664,6 @@ function g_aliasDispatch ()
 
 function g_nextDispatch ()
 {
-
   if g_shiftInto_g_next; then
     breadcrumbs="${breadcrumbs} ${g_next}"
     g_dispatch "$g_next"
@@ -811,7 +812,7 @@ function g_listCmds()
 	local crumbs="${1:-}" 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
  
-  p_embolden_first_line "${c_description:-$c_description_default}\n" 
+  p_embolden_first_line "${c_description}\n" 
 
   be bold echo "commands:"
   p_cmdDefaultEntry "$crumbs" " (this list)"  
@@ -841,13 +842,11 @@ function g_listSubCmds()
 
 function g_autoComplete()
 {
- compgen -W "$breadcrumbs" -- ${g_file}
+ compgen -W "$breadcrumbs" -- ${g_cmd}
 }
 
 function g_builtin ()
 {
-  c_description="${c_description:-$c_description_default}"
-
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=\
 "
@@ -894,7 +893,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
         INSTALL=true
       ;;
       --uninstall )
-        $CONFIRM && u_grepDeleteLines "##:$g_file:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
+        $CONFIRM && u_grepDeleteLines "##:$g_cmd:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
       ;;
       --temp )
         echo "$g_tmp"
@@ -927,10 +926,10 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
 
   if $INSTALL; then
     local conf=""
-    [[ -n ${install_as} ]] && conf+=" ==g_file=${install_as}"
+    [[ -n ${install_as} ]] && conf+=" ==g_cmd=${install_as}"
     [[ -n ${CONFIG+x}   ]] && conf+=" --config=$CONFIG"
 
-    g_bashrc_install "${install_as:-$g_file}" "$HOME/.bashrc" "${g_path/$HOME/\$HOME}${conf}"
+    g_bashrc_install "${install_as:-$g_cmd}" "$HOME/.bashrc" "${g_path/$HOME/\$HOME}${conf}"
       
     $CONFIRM \
       && p_echo "To use the installed feature - start a new bash" \
