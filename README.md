@@ -2,7 +2,7 @@ The groan framework is a basis for building complex hierarchical CLI interfaces 
 and aspires to achieve this with some degree of elegance, through hierarchical composition.
 
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE.md)
-[![Beta Status](https://gitlab.com/keithy/groan-dev/badges/beta/pipeline.svg)](https://gitlab.com/keithy/groan-dev/-/commits/beta)
+[![Beta Status](https://gitlab.com/keithy/groan-a-lot/badges/beta/pipeline.svg)](https://gitlab.com/keithy/groan-a-lot/-/commits/beta)
 [![GitHub issues](https://img.shields.io/github/issues/keithy/groan.svg)](https://github.com/keithy/groan/issues)
 
 # Groan
@@ -189,4 +189,4 @@ and within the same suite. e.g. `crumbs.sub..cmd.breadcrumbs.sub.sh`
 
 ## Test Suite
 
-The comprehensive test suite is here http://github.com/keithy/groan-dev using the `bash-spec` framework.
+The comprehensive test suite is here http://github.com/keithy/groan-a-lot using the `bash-spec` framework.

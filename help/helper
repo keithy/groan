@@ -413,7 +413,7 @@ function g_displayHelp {
 function _p_command_description ()
 {
   p_embolden_first_line "${c_description}"
-  printf "${c_description_:-}${c_description_+\n}"
+  printf "${c_description_:-\n}${c_description_+\n}"
 }
 
 function p_command_description ()
