@@ -154,30 +154,6 @@ A number of template conf files can be provided, the user can choose a file and 
 
     groan setup /usr/local/bin --link --confirm
 
-### Subcommand - remote (provided by `sensible`)
-
-  Expects to find remote host configuration has been provided via a `conf` file that can be loaded using `configure`. Example:
-
-```
-sensible_host_names=('test' 'atomic' 'rocky')
- 
-declare -Ag sensible_deploy sensible_tags sensible_install
-
-sensible_install["_default_"]="/usr/local/bin"
-
-sensible_deploy[test]='localhost:/tmp/sensible'
-sensible_tags[test]='test'
-sensible_install[test]='/tmp'
-
-sensible_deploy[atomic]='keith@atomic.flat:/home/keith/base'
-sensible_install[atomic]='/home/keith/bin'
-sensible_tags[atomic]='server'
-```
-  
-  * Remote deploy via: `groan remote deploy --tag=test --install --confirm`
-  * Remote execute via: `groan remote exec --tag=all -- pwd`
-  * Remote undeploy via: `groan remote undeploy --tag=all --confirm`
-
 ## Sub-command aliasing
 
 The script `groan/commands/help.sub.helper.cmd._dispatch.sh` implements aliasing of one sub-command to another.

@@ -287,9 +287,9 @@ function u_needsSudo() {
     fi
 }
 
-function u_grepDeleteLines 	# in-place one liner
+function u_deleteLines 	# in-place one liner
 {
-	{ \rm "$2" && grep -v "$1" > "$2" ; } < "$2" || true
+	sed -i "/${2}/,/${3:-$2}/d" "$1"
 }
 
 ##############################################################
@@ -558,7 +558,7 @@ function g_bashrc_install ()
 
 	$GDEBUG && p_echo "Before:" && cat "$wip"
 
-	u_grepDeleteLines "##:$name:##" "$wip"
+	u_deleteLines "$wip" "##:$name:##"
 
 	$GDEBUG && p_echo "Cleaned:" && cat "$wip" && echo
 
@@ -894,7 +894,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
         INSTALL=true
       ;;
       --uninstall )
-        $CONFIRM && u_grepDeleteLines "##:$g_cmd:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
+        $CONFIRM && u_deleteLines "$HOME/.bashrc" "##:$g_cmd:##" || p_echo "DRY-RUN --confirm to apply"
       ;;
       --temp )
         echo "$g_tmp"
