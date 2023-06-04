@@ -39,8 +39,6 @@ g_options_common_horizontal=\
  -H     -Q      -V        -D
 "
 
-g_options_=""
-
 ##############################################################
 # http://redsymbol.net/articles/unofficial-bash-strict-mode/
 # Unofficial "Bash Strict Mode"
@@ -163,6 +161,7 @@ function g_readConfig_TopLevel () # parameters come from me()
 
   g_options_common_vertical+="${NL}--theme=neon             select an alternate colour theme"
   breadcrumbs="${g_cmd}"
+  g_default_action="g_plugin__list"
 }
 
 ##############################################################
@@ -189,14 +188,6 @@ function g_find_ () #1) type_string #2) filename #) dirs to look
        $GDEBUG && p_echo "${type}? $(p_dir "$dir")/${name}"
     done
     return 1 # no file found
-}
-
-function p_configs ()
-{
-  for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
-  do
-    echo "${each##*/}"
-  done
 }
 
 function p_dir ()
@@ -388,14 +379,14 @@ function g_pathScriptMappingArgs
 # Help is in three parts: description, options, usage
 # Each has a main and supplementary
 #   - $s_description and $s_description_
-#   - $s_options     and $g_options_
+#   - $s_opts     and $g_options_
 #   - $s_usage       and $s_usage_
 #
 # Description - is displayed with the first line in bold
 # Options - section titled in bold 'options:'
 # Usage   - section titled in bold 'usage:'
 # 
-s_options=""; g_options_=""; s_usage=""; s_usage_=""
+s_opts=""; g_opts=""; s_usage=""; s_usage_=""
 
 function g_displayHelp {
 
@@ -470,18 +461,21 @@ function be ()
 
 function _p_options ()
 {
-  if [[ -z "${s_options}" ]]; then
-    printf "${bold}options:${reset}%s" "${g_options_common_vertical}"
+  if [[ -z "${s_opts}" ]]; then
+    printf "\n%s\n" "${g_options_common_vertical}"
   else
-    printf "${bold}options:${reset}%s%s" "${g_options_common_horizontal}" "$s_options"  
+    printf "%s%s" "${g_options_common_horizontal}" 
   fi
-  [[ -n ${g_options_+x} ]] && echo "${g_options_#*$'\n'}"
+ 
+  p_cols "${s_opts:-$g_opts}" " ; " 
+  echo
 
   return 0
 }
 
 function p_options ()
 {
+  printf "${bold}options:${reset} "
   _p_options
 }
 
@@ -513,17 +507,6 @@ function p_echo () {
   >&2 $LOUD && echo "$@" # or { printf "%s\n" "$*" >&2; }
 }
 
-# loads a help variable
-# e.g. g_help g_options_ "--status" "ping the server"
-
-function g_help ()
-{
-  [[ -n ${3+x} ]] \
-   && printf -v "$1" "%s%-27s%s\n" "${!1}" "$2" "$3" \
-   || printf -v "$1" "%s%s\n" "${!1}" "$2"
-  return 0
-}
-
 g_option_vars=()
 function g_declare_options ()
 {
@@ -540,7 +523,7 @@ function _g_bashrc_ ()
   local name="$1" alias_text="$2"
 cat <<RCD
 alias $name='${alias_text}' ##:$name:##
-_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- -=AUTO) ); } ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- ---AUTOCOMPLETE) ); } ##:$name:##
 complete -F _ac_$name ${name}          ##:$name:##
 RCD
 }
@@ -795,6 +778,11 @@ function p_c1 ()
   printf "%-${bw}s" "${1}"
 }
 
+function p_cols ()
+{
+    printf -- "${1}" | column -c 2 -s ";" -t
+}
+
 function p_cmdDefaultEntry ()
 {
   p_c1 "$1"
@@ -841,107 +829,103 @@ function g_listSubCmds()
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
 
-function g_autoComplete()
+function g_plugin___AUTOCOMPLETE ()
 {
- compgen -W "$breadcrumbs" -- ${g_cmd}
+  compgen -W "$breadcrumbs" -- ${g_cmd}
+  exit 0
+}
+
+g_opts+="--install | --uninstall ; install as bash alias\n"
+g_opts+="--install=<name> ; install as bash alias <name>\n"
+g_opts+="--install=<name> --config=<alt> ; install with config <alt>\n"
+
+function g_plugin__install ()
+{
+  g_bashrc_install "${2:-$g_cmd}" "$HOME/.bashrc" \
+    "${g_path/$HOME/\$HOME}${2+ ==g_cmd=}${2:-}${CONFIG+ --config=}${CONFIG:-}"
+
+  $CONFIRM \
+    && p_echo "To use the installed feature - start a new bash" \
+    || p_echo "DRY-RUN --confirm to apply"   
+}
+
+function g_plugin__uninstall ()
+{
+  $CONFIRM \
+    && u_deleteLines "$HOME/.bashrc" "##:$g_cmd:##" \
+    || p_echo "DRY-RUN --confirm to apply"
+}
+g_opts+=" ; \n--theme=off ; alternate theme\n\n"
+g_opts+="--version ; git version\n"
+function g_plugin__version ()
+{
+  printf "$g_home "
+  be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
+}
+
+g_opts+="--origin ; git repo\n"
+function g_plugin__origin ()
+{
+  printf "$g_home "
+  be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
+}
+
+g_opts+="--update ; git pull latest\n"
+function g_plugin__update ()
+{
+  $CONFIRM \
+    && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
+    || p_echo "DRY-RUN --confirm to apply"
+}
+
+g_opts+="--temp ; the temp directory\n"
+function g_plugin__temp  () { echo "$g_tmp"  ; }
+g_opts+="--which ; path of the executable\n"
+function g_plugin__which () { echo "$g_path" ; }
+g_opts+="--list ; list sub-commands\n"
+function g_plugin__list () { g_listCmds "$breadcrumbs" ; }
+
+g_opts+="--all | --list-all ; list all sub-commands\n"
+function g_plugin__all () { g_listCmdsAll ; }
+function g_plugin__list_all () { g_listCmdsAll ; }
+
+g_opts+="--configs ; list available config files\n"
+function g_plugin__configs ()
+{
+  for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
+  do
+    echo "${each##*/}"
+  done
 }
 
 function g_builtin ()
 {
   # since help doesn't exec anything many common options don't apply
-  g_options_common_vertical=\
-"
---theme=off                      alternate theme
---version                        git version
---origin                         git repo
---update                         git pull latest
---temp                           the temp directory
---which                          path of the executable
-
---install | --uninstall          install as bash alias
---install=<name>                 install as bash alias <name>
---install=<name> --config=<alt>  install with config <alt>
---configs                        list available config files
-"
+  g_options_common_vertical=""
 
   s_usage=\
 "
 $breadcrumbs                        list commands
 $breadcrumbs --install              install as bash alias
-$breadcrumbs --install=dtt -C=dtt   install as bash alias with config
+$breadcrumbs --install=tool -C=tool install as bash alias with config
 "
 
   $METADATAONLY && return 0
 
-  g_declare_options LIST_ALL_CMD INSTALL LIST_CMD=true
-  local install_as=""
-
+  g_declare_options LIST_ALL_CMD LIST_CMD=true
+  
   for arg in "${args[@]:+${args[@]}}"
   do
-    LIST_CMD=false
     case "$arg" in
-      --list )
-        LIST_CMD=true
-      ;;
-      --all | --list-all )
-        LIST_ALL_CMD=true
-      ;;
-      --install=* )
-        INSTALL=true
-        install_as=${arg#--install=}
-      ;;
-      --install )
-        INSTALL=true
-      ;;
-      --uninstall )
-        $CONFIRM && u_deleteLines "$HOME/.bashrc" "##:$g_cmd:##" || p_echo "DRY-RUN --confirm to apply"
-      ;;
-      --temp )
-        echo "$g_tmp"
-      ;;
-      --which )
-        echo "$g_path"
-      ;;
-      --version )
-        printf "$g_home "
-        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
-      ;;
-      --origin )
-        printf "$g_home "
-        be bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
-      ;;
-      --update )
-        $CONFIRM \
-          && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
-          || p_echo "DRY-RUN --confirm to apply"
-      ;;
-      --configs )
-          p_configs
-      ;;
-      -=AUTO )
-        g_autoComplete "${args[@]:+${args[@]}}"
-        exit 0
+      --*=* | --* )
+        local opt="${arg%%=*}" param="${arg#*=}"
+        [[ $(type -t g_plugin${opt//-/_}) == function ]] \
+          && g_plugin${opt//-/_} "${param}" "${args[@]:+${args[@]}}"
       ;;
     esac
   done
 
-  if $INSTALL; then
-    local conf=""
-    [[ -n ${install_as} ]] && conf+=" ==g_cmd=${install_as}"
-    [[ -n ${CONFIG+x}   ]] && conf+=" --config=$CONFIG"
-
-    g_bashrc_install "${install_as:-$g_cmd}" "$HOME/.bashrc" "${g_path/$HOME/\$HOME}${conf}"
-      
-    $CONFIRM \
-      && p_echo "To use the installed feature - start a new bash" \
-      || p_echo "DRY-RUN --confirm to apply"
-    
-  fi
-
-  $LIST_CMD && g_listCmds "$breadcrumbs"
-  $LIST_ALL_CMD && g_listCmdsAll
-  
-  return 0
+  "$g_default_action" #
 }
 
 ##############################################################

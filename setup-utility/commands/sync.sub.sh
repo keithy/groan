@@ -11,7 +11,7 @@ The framework has many code files that should be identical:
 - highlight latest vs out of date code
 - --update brings all files up to date
 "
-s_options=\
+s_opts=\
 "
 --groans              # show all groan code (default)
 --update [--confirm]  # update older files to latest code

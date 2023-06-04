@@ -37,7 +37,7 @@ $breadcrumbs --ping <this>    echo <this>
 "
 
 # Our default metadata contribution to help
-s_options="
+s_opts="
 --initialize | -i   initialize fixtures
 --list       | -l   list suites
 --kind=<type>       select specialised set of suites

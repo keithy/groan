@@ -5,7 +5,7 @@
 me "$BASH_SOURCE" #tradition
 
 command="configure" ; s_description="select or edit configuration file"
-s_options=\
+s_opts=\
 "
 --options        list options and presets
 --show           show current config file
@@ -41,7 +41,7 @@ do
             SHOWCONFIG=false
         ;;
         --options)
-            SHOWs_options=true
+            SHOWs_opts=true
             SHOWCONFIG=false
         ;;
         --install=*)

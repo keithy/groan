@@ -6,7 +6,7 @@
 me "$BASH_SOURCE" #tradition
 command="new"
 s_description="create a new project/file structure from a template"
-s_options=\
+s_opts=\
 "--options|--list    # list available templates
 --confirm            # not a dry run - perform action
 --template=<choice>  # selection (-t=<choice>)
@@ -104,8 +104,8 @@ fi
 $NO_TRAMPLE && [[ -d "$targetPath" ]] && echo "$targetPath exists (--go-ahead) to populate existing directory" && exit 1
 
 # INSTALL
-r_s_options=""
-$VERBOSE && r_s_options="v"
+r_s_opts=""
+$VERBOSE && r_s_opts="v"
 
 $LOUD && echo "${bold}Creating new project using:${reset} $TEMPLATE"
 $LOUD && echo "rsync -rLtO${r_options}" "$templatePath" "$targetPath"
