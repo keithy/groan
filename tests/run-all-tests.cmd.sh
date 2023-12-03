@@ -37,7 +37,7 @@ $breadcrumbs --ping <this>    echo <this>
 "
 
 # Our default metadata contribution to help
-s_options="
+s_opts="
 --initialize | -i   initialize fixtures
 --list       | -l   list suites
 --kind=<type>       select specialised set of suites
@@ -78,7 +78,7 @@ if $METADATAONLY; then
   return
 fi
 
-INITIALIZE=false
+INIT=false
 ECHO_TEST=false
 ECHO_ENV=false
 ECHO_EVAL=false
@@ -90,7 +90,7 @@ for arg in "$@"
 do
     case "$arg" in
       --initialize |--i*|-i)
-        INITIALIZE=true
+        INIT=true
         RUNNER=false
         # doesnt run the tests
       ;;

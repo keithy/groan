@@ -52,7 +52,7 @@ do
   esac
 done
  
-s_options=()
+s_opts=()
 
 if $DRYRUN; then
   r_options+=('--dry-run')

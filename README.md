@@ -2,7 +2,7 @@ The groan framework is a basis for building complex hierarchical CLI interfaces 
 and aspires to achieve this with some degree of elegance, through hierarchical composition.
 
 [![Software License](https://img.shields.io/badge/license-MIT-brightgreen.svg)](LICENSE.md)
-[![Beta Status](https://gitlab.com/keithy/groan-dev/badges/beta/pipeline.svg)](https://gitlab.com/keithy/groan-dev/-/commits/beta)
+[![Beta Status](https://gitlab.com/keithy/groan-a-lot/badges/beta/pipeline.svg)](https://gitlab.com/keithy/groan-a-lot/-/commits/beta)
 [![GitHub issues](https://img.shields.io/github/issues/keithy/groan.svg)](https://github.com/keithy/groan/issues)
 
 # Groan
@@ -154,30 +154,6 @@ A number of template conf files can be provided, the user can choose a file and 
 
     groan setup /usr/local/bin --link --confirm
 
-### Subcommand - remote (provided by `sensible`)
-
-  Expects to find remote host configuration has been provided via a `conf` file that can be loaded using `configure`. Example:
-
-```
-sensible_host_names=('test' 'atomic' 'rocky')
- 
-declare -Ag sensible_deploy sensible_tags sensible_install
-
-sensible_install["_default_"]="/usr/local/bin"
-
-sensible_deploy[test]='localhost:/tmp/sensible'
-sensible_tags[test]='test'
-sensible_install[test]='/tmp'
-
-sensible_deploy[atomic]='keith@atomic.flat:/home/keith/base'
-sensible_install[atomic]='/home/keith/bin'
-sensible_tags[atomic]='server'
-```
-  
-  * Remote deploy via: `groan remote deploy --tag=test --install --confirm`
-  * Remote execute via: `groan remote exec --tag=all -- pwd`
-  * Remote undeploy via: `groan remote undeploy --tag=all --confirm`
-
 ## Sub-command aliasing
 
 The script `groan/commands/help.sub.helper.cmd._dispatch.sh` implements aliasing of one sub-command to another.
@@ -189,4 +165,4 @@ and within the same suite. e.g. `crumbs.sub..cmd.breadcrumbs.sub.sh`
 
 ## Test Suite
 
-The comprehensive test suite is here http://github.com/keithy/groan-dev using the `bash-spec` framework.
+The comprehensive test suite is here http://github.com/keithy/groan-a-lot using the `bash-spec` framework.

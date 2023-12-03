@@ -7,7 +7,7 @@ me "$BASH_SOURCE" #tradition
 command="$s_sub_cmd"
 s_description="list available topics"
 #since help doesn't exec anything many common options don't apply
-commons_options="--theme=light    # alternate theme"
+commons_opts="--theme=light    # alternate theme"
 s_usage="$breadcrumbs    # list topics"
 
 $METADATAONLY && return

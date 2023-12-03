@@ -7,9 +7,9 @@ me "$BASH_SOURCE" #tradition
 
 command="test"
 s_description="deploy and execute on remote servers"
-s_usage=\
-"$breadcrumbs               # test ssh connections
-$breadcrumbs --help        # this message"
+s_usage="
+$breadcrumbs ;         # test ssh connections\n
+$breadcrumbs --help ;  # this message\n"
 
 $METADATAONLY && return
 

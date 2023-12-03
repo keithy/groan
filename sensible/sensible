@@ -287,7 +287,7 @@ function u_needsSudo() {
     fi
 }
 
-function u_grepDeleteLines 	# in-place one liner
+function u_deleteLines 	# in-place one liner
 {
 	{ \rm "$2" && grep -v "$1" > "$2" ; } < "$2" || true
 }
@@ -388,14 +388,14 @@ function g_pathScriptMappingArgs
 # Help is in three parts: description, options, usage
 # Each has a main and supplementary
 #   - $s_description and $s_description_
-#   - $s_options     and $g_options_
+#   - $s_opts     and $g_options_
 #   - $s_usage       and $s_usage_
 #
 # Description - is displayed with the first line in bold
 # Options - section titled in bold 'options:'
 # Usage   - section titled in bold 'usage:'
 # 
-s_options=""; g_options_=""; s_usage=""; s_usage_=""
+s_opts=""; g_options_=""; s_usage=""; s_usage_=""
 
 function g_displayHelp {
 
@@ -413,12 +413,13 @@ function g_displayHelp {
 function _p_command_description ()
 {
   p_embolden_first_line "${c_description}"
+  printf "${c_description+\n}" # if the c_description is defined
+  printf "${c_description_:-}${c_description+\n}"
 }
 
 function p_command_description ()
 {
   _p_command_description
-  printf "${c_description+\n}" # if the c_description is defined
 }
 
 function _p_description ()
@@ -470,10 +471,10 @@ function be ()
 
 function _p_options ()
 {
-  if [[ -z "${s_options}" ]]; then
+  if [[ -z "${s_opts}" ]]; then
     printf "${bold}options:${reset}%s" "${g_options_common_vertical}"
   else
-    printf "${bold}options:${reset}%s%s" "${g_options_common_horizontal}" "$s_options"  
+    printf "${bold}options:${reset}%s%s" "${g_options_common_horizontal}" "$s_opts"  
   fi
   [[ -n ${g_options_+x} ]] && echo "${g_options_#*$'\n'}"
 
@@ -540,7 +541,7 @@ function _g_bashrc_ ()
   local name="$1" alias_text="$2"
 cat <<RCD
 alias $name='${alias_text}' ##:$name:##
-_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- -=AUTO) ); } ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- ---AUTOCOMPLETE) ); } ##:$name:##
 complete -F _ac_$name ${name}          ##:$name:##
 RCD
 }
@@ -558,7 +559,7 @@ function g_bashrc_install ()
 
 	$GDEBUG && p_echo "Before:" && cat "$wip"
 
-	u_grepDeleteLines "##:$name:##" "$wip"
+	u_deleteLines "##:$name:##" "$wip"
 
 	$GDEBUG && p_echo "Cleaned:" && cat "$wip" && echo
 
@@ -814,7 +815,7 @@ function g_listCmds()
  
   p_embolden_first_line "${c_description}\n" 
 
-  be bold echo "commands:"
+  loud bold echo "commands:"
   p_cmdDefaultEntry "$crumbs" " (this list)"  
   # p_c1 "$crumbs" ; echo "this list"
 
@@ -835,7 +836,7 @@ function g_listSubCmds()
 
   p_description
 
-  be bold p_cmdDefaultEntry "$crumbs"
+  loud bold p_cmdDefaultEntry "$crumbs"
   g_eachSubMetaDo $s_select p_scriptEntry "$crumbs" && echo || true
   g_eachSubMetaDo c_select g_listSubCmds "$crumbs" && echo || true
 }
@@ -893,7 +894,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
         INSTALL=true
       ;;
       --uninstall )
-        $CONFIRM && u_grepDeleteLines "##:$g_cmd:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
+        $CONFIRM && u_deleteLines "##:$g_cmd:##" "$HOME/.bashrc" || p_echo "DRY-RUN --confirm to apply"
       ;;
       --temp )
         echo "$g_tmp"
@@ -917,7 +918,7 @@ $breadcrumbs --install=dtt -C=dtt   install as bash alias with config
       --configs )
           p_configs
       ;;
-      -=AUTO )
+      ---AUTOCOMPLETE )
         g_autoComplete "${args[@]:+${args[@]}}"
         exit 0
       ;;
