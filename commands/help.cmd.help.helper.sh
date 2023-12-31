@@ -5,6 +5,7 @@
 
 me "$BASH_SOURCE" #tradition
 
+crumb="$s_cmd"
 g_readConfig "${s_dir}" "${s_rest//./\/}"
 g_nextDispatch
 

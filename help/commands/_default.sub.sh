@@ -12,11 +12,10 @@ command="default"
 s_description="show topical help"
 #since help doesn't exec anything many common options don't apply
 
-s_usage=\
-"
-${breadcrumbs} <command|topic>
-${breadcrumbs} commands
-${breadcrumbs} --help    # this text
+s_usage="
+${breadcrumbs} <command|topic> ; \n
+${breadcrumbs} commands ; \n
+${breadcrumbs} --help ; # this text \n
 "
 
 $METADATAONLY && return

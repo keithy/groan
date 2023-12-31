@@ -10,14 +10,13 @@ s_opts=\
 --options        list options and presets
 --show           show current config file
 "
-s_usage=\
-"
-$breadcrumbs                                 # show current config file
-$breadcrumbs --show                          # show current config file
-$breadcrumbs --edit                          # edit current config file
-$breadcrumbs --options                       # list available location options
-$breadcrumbs --install=<option> <file.conf>  # install file at given location (local/user/global)
-$breadcrumbs --help                          # this message
+s_usage="
+$breadcrumbs ;                                 # show current config file\n
+$breadcrumbs --show ;                          # show current config file\n
+$breadcrumbs --edit ;                        # edit current config file\n
+$breadcrumbs --options ;                      # list available location options\n
+$breadcrumbs --install=<option> <file.conf> ; # install file at given location (local/user/global)\n
+$breadcrumbs --help ;                        # this message\n
 "
 
 $METADATAONLY && return
