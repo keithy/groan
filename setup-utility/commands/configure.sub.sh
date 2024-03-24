@@ -13,10 +13,10 @@ s_opts=\
 s_usage="
 $breadcrumbs ;                                 # show current config file\n
 $breadcrumbs --show ;                          # show current config file\n
-$breadcrumbs --edit ;                        # edit current config file\n
-$breadcrumbs --options ;                      # list available location options\n
-$breadcrumbs --install=<option> <file.conf> ; # install file at given location (local/user/global)\n
-$breadcrumbs --help ;                        # this message\n
+$breadcrumbs --edit ;                          # edit current config file\n
+$breadcrumbs --options ;                       # list available location options\n
+$breadcrumbs --install=<option> <file.conf> ;  # install file at given location (local/user/global)\n
+$breadcrumbs --help ;                          # this message\n
 "
 
 $METADATAONLY && return
@@ -206,7 +206,7 @@ if $SHOWOPTIONS; then
     foreach_preset_do "*" p_preset_name
 
     echo
-    printf "Current setting: " ; p_path "${g_config:-none (no config) ($CONFIG not found)}"
+    printf "Current setting: " ; p_path "${g_config_name:-none (no config) ($CONFIG not found)}"
     echo
 fi
 
@@ -236,7 +236,7 @@ if $EDITCONFIG; then
     foreach_config_do "$match" edit_config_file || exit 0
 
     echo
-    printf "Current setting: " ; p_path "${g_config:-$CONFIG ($CONFIG.conf not found)}"
+    printf "Current setting: " ; p_path "${g_config_name:-$CONFIG ($CONFIG.conf not found)}"
     echo
 
     exit 1
@@ -258,7 +258,7 @@ if $INSTALL; then
     foreach_preset_do "$match" install_preset_file || exit 0
 
     echo
-    printf "Current setting: " ; p_path "${g_config:-}"
+    printf "Current setting: " ; p_path "${g_config_name:-}"
     echo " (${bold}$match${reset} not found)"
 
     exit 1 

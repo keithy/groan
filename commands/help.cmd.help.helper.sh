@@ -6,7 +6,7 @@
 me "$BASH_SOURCE" #tradition
 
 crumb="$s_cmd"
-g_readConfig "${s_dir}" "${s_rest//./\/}"
+g_readConfig "${s_dir}/${s_rest//./\/}"
 g_nextDispatch
 
 #"This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 

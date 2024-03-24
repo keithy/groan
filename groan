@@ -18,7 +18,7 @@
 ##############################################################
 # Default metadata - our contribution to help
 #
-# Sub-commands sourced with METADATAONLY=true collates metadata
+# Sub-commands sourced with METADATAONLY=true collate metadata
 g_options_common_vertical=\
 "
 --help         | -H | -?  usage help for a command
@@ -48,19 +48,17 @@ set -o allexport
 NL=$'\n' # useful
 
 ##############################################################
-# Every script traditionally calls this function
+# Traditionally every script calls this function
 #
-function me () #BASH_SOURCE
+function me () # BASH_SOURCE
 {
   $MEDEBUG && printf "\n\e[2m${1%/*}/\e[1m${1##*/}\e[0m\n" # dim/bold
   my_path=$(realpath -s "${1}")
-  my_file="${my_path##*/}"
-  my_dir="${my_path%/*}"
 }
 
 ##############################################################
-# Customizing config loads first, setting where the command 
-# finds everything else, including config.
+# A customizing config loads first, setting where to find 
+# everything else, including config.
 # Defaults are set here, and each executable may have a
 # <exe>.conf (or perhaps a hidden .<exe>.conf)
 #
@@ -72,8 +70,8 @@ function me () #BASH_SOURCE
 
 function g_readConfig () # from conf files
 {
-  g_parseScriptPath "$1/$2"
-  local commands_folder="${3:-commands}"
+  g_parseScriptPath "$1"
+  local commands_folder="${2:-commands}"
 
   c_dir="$s_dir"
   c_file="$s_file"
@@ -82,7 +80,7 @@ function g_readConfig () # from conf files
   c_dirname="${s_dir##*/}"
  
   c_description_default="$g_context ${c_cmd} tool"
-  s_select="${s_select:-s_select_best}" # set if not set
+  s_select_fn="${s_select_fn:-s_select_BEST}" # set if not set
 
   g_types=( cmd red wip obs test spec )
   
@@ -108,37 +106,24 @@ function g_readConfig () # from conf files
     ;;
   esac
 
-  g_config_file_options=("user" "context" "global")
-  g_config_file_locations=(
-    "$HOME/.config/${g_dirname}" # --user
-    "${g_dir}/../config"         # --context
-    "${g_dir}/config"  	         # --global # installed with the code/config dir
-  )
+  g_config_file_options=(   "global"           "context"             "user")
+  g_config_file_locations=( "${g_dir}/config"  "${g_dir}/../config"  "$HOME/.config/${g_dirname}" )
 
-  g_locations=(
-	  "${c_dir}/${commands_folder}"                
-	  "${c_dir}" 
-	  "${c_dir}/help"                  
-  )
+  g_subcmd_locations=( "${c_dir}/${commands_folder}" "${c_dir}"  "${c_dir}/help" )
 
   #c_dir c_name globals used within <name>.conf file
 
-  # If our context has a different name look for our configuration in these locations
-  # [[ "$c_file" != "$c_dirname" ]] && \
-  g_find_ 'Custom1 ' "${c_file}.conf" "${c_dir}" "${c_dir}/config" && source "$g_found"
-  
-  # Look for our context defined configuration in these locations
-  g_find 'Custom2 ' "${c_dirname}.conf" && source "$g_found"
+  # Read customization from
+  g_find 'Custom0 ' ".${c_file}.conf"   "${c_dir}"                                 && source "$g_found"
+  g_find 'Custom1 ' "${c_file}.conf"    "${c_dir}" "${g_config_file_locations[@]}" && source "$g_found"
+  g_find 'Custom2 ' "${c_dirname}.conf" "${g_config_file_locations[@]}"            && source "$g_found"
     
-  # in preference to a hidden personal locations file
-  #g_find_ 'Custom3 ' ".${c_file}.conf" "${c_dir}" && source "$g_found"
-
-  # Obtain values from...
-  if g_find_ 'Config  ' "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
+  # Obtain config from...
+  if g_find 'Config  ' "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
   then
     g_config_path="${g_found}"
-    g_config="${g_found##*/}"
-    g_config="${g_config%.conf}" 
+    g_config_name"${g_config_path##*/}"
+    g_config_name"${g_config_name%.conf}" 
     source "${g_config_path}"
   fi
 
@@ -149,13 +134,14 @@ function g_readConfig () # from conf files
 
 function g_readConfig_TopLevel () # parameters come from me() 
 {
-  g_path="${my_path}"
-  g_home="$(p_dir "$my_dir")"
-  g_dir="${my_dir}"
-  g_dirname="${my_dir##*/}"
+  g_path="$1"
+  g_dir="${1%/*}"
+  g_dirname="${g_dir##*/}"
+  g_file="${1##*/}" # backup for when g_cmd is overriden
+
+  g_home="$(p_dir "$g_dir")"
   [[ -z ${g_context+x} ]] && g_context="${g_dirname}"
-  g_file="${my_file}" # backup for when g_cmd is overriden
-  g_cmd="${g_cmd:-$my_file}" # allows runtime override via ==g_cmd=toolname
+  g_cmd="${g_cmd:-$g_file}" # allows runtime override via ==g_cmd=toolname
 
   # g_options+="${NL}--theme=neon ; alternate theme\n"
   breadcrumbs="${g_cmd}"
@@ -167,11 +153,6 @@ function g_readConfig_TopLevel () # parameters come from me()
 # find a <filename>
 
 function g_find () #1) type_string #2) filename #) dirs to look
-{
-  g_find_ "$@" "${g_config_file_locations[@]}" && return 0 || return 1
-}
-
-function g_find_ () #1) type_string #2) filename #) dirs to look
 {
   local dir file type="${1}" name="${2}" ; shift ; shift
 	for dir in "$@"
@@ -286,9 +267,9 @@ function u_deleteLines 	# in-place one liner
 #
 function g_executeScriptPath ()
 {
-  local bk=("${g_locations[@]}")
+  local bk=("${g_subcmd_locations[@]}")
   _g_executeScriptPath "$@"
-  g_locations=("${bk[@]}")
+  g_subcmd_locations=("${bk[@]}")
 }
 
 function _g_executeScriptPath ()
@@ -467,7 +448,7 @@ function p_options ()
 
 function _p_usage ()
 {
-  p_cols "B${s_usage:-\n$breadcrumbs}B" 
+  p_cols "${s_usage:-\n$breadcrumbs}B" 
   echo
 }
 
@@ -514,7 +495,7 @@ function _g_bashrc_ ()
 cat <<RCD
 alias $name='${alias_text}' ##:$name:##
 _ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- ---AUTOCOMPLETE) ); } ##:$name:##
-complete -F _ac_$name ${name}          ##:$name:##
+# complete -F _ac_$name ${name}          ##:$name:##
 RCD
 
 }
@@ -674,7 +655,7 @@ function g_findSubCommandScript ()
     local target="${s_cmd}*.${s_type}.*"
     local exact="${s_cmd}.${s_type}.*"
 
-    for s_dir in "${g_locations[@]}"
+    for s_dir in "${g_subcmd_locations[@]}"
     do
       for s_path in "$s_dir"/$exact
       do
@@ -682,7 +663,7 @@ function g_findSubCommandScript ()
       done
     done
 
-    for s_dir in "${g_locations[@]}"
+    for s_dir in "${g_subcmd_locations[@]}"
     do
       $GDEBUG && p_echo "Scanning for $target in: $(p_dir "$s_dir")"
 
@@ -725,7 +706,7 @@ function g_eachSubMetaDo ()
   local type s_dir path
   for type in "${g_types[@]}"
   do
-    for dir in "${g_locations[@]}"
+    for dir in "${g_subcmd_locations[@]}"
     do
       for path in "$dir"/*.$type.*
       do
@@ -740,14 +721,14 @@ function g_eachSubMetaDo ()
   [[ "$found" == true ]]
 }
 
-function s_select_all ()
+function s_select_ALL ()
 {
   [[ -z ${c_cmd+x} ]] && [[ -n ${s_cmd+x} ]]
 }
 
-function s_select_best ()
+function s_select_BEST ()
 {
-  s_select_all && { $VERBOSE || [[ "$type" == "${g_types[0]}" ]] } 
+  s_select_ALL && { $VERBOSE || [[ "$type" == "${g_types[0]}" ]] } 
 }
 
 function c_select ()
@@ -801,7 +782,7 @@ function g_listCmds()
   # p_c1 "$crumbs" ; echo "this list"
 
   g_eachSubMetaDo c_select p_scriptEntry "${crumbs}" && echo
-  g_eachSubMetaDo $s_select p_scriptEntry "${crumbs}" && echo
+  g_eachSubMetaDo $s_select_fn p_scriptEntry "${crumbs}" && echo
   :
 }
 
@@ -823,13 +804,13 @@ function g_listAllSubCmds()
   u_includes list "$crumbs" && return 0
  
   list+=($breadcrumbs)
-  [[ -z ${1+x} ]] && g_readConfig_TopLevel
-  g_readConfig "$c_dir" "$c_file"
+  [[ -z ${1+x} ]] && g_readConfig_TopLevel "$my_path"
+  g_readConfig "$c_path"
 
   p_description
 
   bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo $s_select p_scriptEntry "=$crumbs=" && echo || true
+  g_eachSubMetaDo $s_select_fn p_scriptEntry "=$crumbs=" && echo || true
   g_eachSubMetaDo c_select g_listAllSubCmds "-$crumbs-" && echo || true
 }
 
@@ -1030,7 +1011,7 @@ function g_option__env  () { set  ; }
 
 g_options+="--which ; path of the executable\n"
 function g_option__which () { echo "$g_path" ; }
-g_options+="--list ; list sub-commands\n"s
+g_options+="--list ; list sub-commands\n"
 function g_option__list () { g_listCmds ; }
 
 g_options+="--all | --list-all ; list all sub-commands\n"
@@ -1041,7 +1022,7 @@ function g_option__list_all () { g_listAllSubCmds; }
 # START READING CONFIGURATION
 me "${BASH_SOURCE}" # tradition
 
-g_readConfig_TopLevel && g_readConfig "$my_dir" "$my_file"
+g_readConfig_TopLevel "$my_path" && g_readConfig "$my_path"
 
 function g_option___AUTOCOMPLETE ()
 {
