@@ -20,5 +20,3 @@ case $THEME in
         reset=$'\e[0m' 
     ;;
 esac
-
-
