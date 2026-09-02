@@ -649,9 +649,10 @@ function g_parseScriptPath ()
 # s_isDispatcher in the caller's scope.
 function g_parseScriptPathMore ()
 {
-  s_path="$1"
-  s_file="${s_path##*/}"
-  s_dir="${s_path%/*}"
+  # First set the basic s_* fields via the shared parser so the
+  # dispatcher-specific code below can rely on them.
+  g_parseScriptPath "$1"
+
   s_sub_cmd=""
   s_dest_cmd=""
   s_dest_path=""
