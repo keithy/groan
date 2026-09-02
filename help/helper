@@ -798,7 +798,7 @@ function g_listCmds()
   local crumbs
 
   if [[ -z ${1+x} ]]; then
-    crumbs="E${breadcrumbs}E"
+    crumbs="«${breadcrumbs}»"
   else
     crumbs="Z$1Z"
   fi
@@ -825,7 +825,7 @@ function g_listAllSubCmds_XXX()
     list=() 
     crumbs="E${breadcrumbs}E"
   else
-    crumbs="$1 Z${crumb}Z"
+    crumbs="$1 ${crumb}"
   fi
  
   # p_kv breadcrumbs "$breadcrumbs $g_next $s_cmd $c_cmd"
@@ -841,8 +841,8 @@ function g_listAllSubCmds_XXX()
   p_description
 
   bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo $s_select_fn p_scriptEntry "=$crumbs=" && echo || true
-  g_eachSubMetaDo c_select g_listAllSubCmds "-$crumbs-" && echo || true
+  g_eachSubMetaDo $s_select_fn p_scriptEntry "$crumbs" && echo || true
+  g_eachSubMetaDo c_select g_listAllSubCmds "$crumbs" && echo || true
 }
 
 function g_walk_commands ()
@@ -917,26 +917,62 @@ function g_listAllSubCmds ()
 
   if [[ -z ${1+x} ]]; then
     list=()
-    crumbs="E${breadcrumbs}E"
+    crumbs="${breadcrumbs}"
   else
-    crumbs="$1 Z${crumb}Z"
+    crumbs="$1 ${crumb:-}"
   fi
- 
+
   # p_kv breadcrumbs "$breadcrumbs $g_next $s_cmd $c_cmd"
 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
 
   u_includes list "$crumbs" && return 0
- 
-  list+=($breadcrumbs)
+
+  list+=("$crumbs")
   [[ -z ${1+x} ]] && g_readConfig_TopLevel "$my_path"
   g_readConfig "$c_path"
+
+  # Snapshot g_locations BEFORE sourcing any sub-commands. Dispatcher
+  # files themselves call g_readConfig to re-anchor to their destination
+  # suite, which mutates g_locations. Without this snapshot, the for
+  # loop below would scan the destination's commands, not this level's.
+  local -a iteration_locations
+  iteration_locations=("${g_locations[@]}")
 
   p_description
 
   bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo $s_select_fn p_scriptEntry "=$crumbs=" && echo || true
-  g_eachSubMetaDo c_select g_listAllSubCmds "-$crumbs-" && echo || true
+  g_eachSubMetaDo $s_select_fn p_scriptEntry "$crumbs" && echo || true
+
+  # Recurse into dispatcher aliases: walk g_locations[], find files matching
+  # *.sub.*.cmd.* that are dispatcher aliases (s_isDispatcher=true), and
+  # re-enter at the destination suite. c_select (the previous filter,
+  # c_cmd == s_cmd) only matched the legacy self-titled nesting pattern;
+  # the dispatcher pattern below is the modern one.
+  #
+  # We restore iteration_locations after each recursive call so the
+  # next iteration of the for loop scans the caller's commands, not the
+  # destination's.
+
+  for s_dir in "${iteration_locations[@]}" ; do
+    for s_path in "$s_dir"/*.sub.*.cmd.* ; do
+      [[ -f "$s_path" ]] || continue
+      g_parseScriptPathMore "$s_path"
+      $s_isDispatcher || continue
+      [[ -n "$s_dest_cmd" ]] || continue
+
+      # Source the dispatcher so its s_description/s_usage become available.
+      METADATAONLY=true g_executeScriptPath "$s_path" ""
+
+      # Re-anchor to the destination suite and recurse with an extended crumb.
+      g_readConfig "${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd}"
+      g_listAllSubCmds "${crumbs} ${s_sub_cmd}"
+
+      # Restore g_locations so the next iteration of the for loop scans
+      # the caller's commands, not the destination's.
+      g_locations=("${iteration_locations[@]}")
+    done
+  done
 }
 
 function _g_optionsTopLevelOnly ()
