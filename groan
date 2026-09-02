@@ -328,6 +328,28 @@ function _g_executeScriptPath ()
         sudo "$s_path" "${args[@]:+${args[@]}}"
     ;;
     *)
+        # Refuse to eval scripts that live outside the configured
+        # sub-command locations. A symlink in commands/ pointing at a
+        # hostile file would otherwise be eval'd here. We resolve
+        # symlinks and confirm the resolved path is under one of the
+        # g_subcmd_locations[] directories.
+        local resolved safe=false
+        if command -v realpath >/dev/null 2>&1; then
+            resolved="$(realpath "$s_path" 2>/dev/null)"
+        else
+            resolved="$(cd -- "$(dirname -- "$s_path")" 2>/dev/null && pwd -P)/$(basename -- "$s_path")"
+        fi
+        [[ -z "$resolved" ]] && { $LOUD && p_echo "Refused: cannot resolve $s_path"; return 1; }
+        for allowed in "${g_subcmd_locations[@]}"; do
+            if [[ "$resolved" == "$allowed"/* ]] || [[ "$resolved" == "$allowed" ]]; then
+                safe=true
+                break
+            fi
+        done
+        if ! $safe; then
+            $LOUD && p_echo "Refused: $s_path resolves outside sub-command locations"
+            return 1
+        fi
         $GDEBUG && p_echo "$status eval> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
         $XDEBUG && set -x
         eval "$s_path" "${args[@]:+${args[@]}}"
