@@ -798,9 +798,9 @@ function g_listCmds()
   local crumbs
 
   if [[ -z ${1+x} ]]; then
-    crumbs="${breadcrumbs}"
+    crumbs="«${breadcrumbs}»"
   else
-    crumbs="$1"
+    crumbs="Z$1Z"
   fi
 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
