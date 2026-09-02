@@ -249,7 +249,7 @@ function u_includes ()
 # MacOS X         - x86_64-apple-darwin22.1.0  darwin22.1.0
 # Windows GitBash - x86_64-pc-msys             msys
 
-u_PLATFORM="${BASH_VERSINFO[5]}" # || use $OSTYPE
+u_PLATFORM="${BASH_VERSINFO[5]:-$OSTYPE}" # || use $OSTYPE
 
 ##############################################################
 # Ensure that sudo is available
