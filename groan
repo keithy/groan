@@ -130,8 +130,8 @@ function g_readConfig () # from conf files
   if g_find 'Config  ' "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
   then
     g_config_path="${g_found}"
-    g_config_name"${g_config_path##*/}"
-    g_config_name"${g_config_name%.conf}" 
+    g_config_name="${g_config_path##*/}"
+    g_config_name="${g_config_name%.conf}"
     source "${g_config_path}"
   fi
 
