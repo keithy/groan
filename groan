@@ -82,6 +82,14 @@ function g_readConfig () # from conf files
   c_description_default="$g_context ${c_cmd} tool"
   s_select_fn="${s_select_fn:-s_select_BEST}" # set if not set
 
+  # Sub-command file types recognised by the dispatcher. The first entry
+  # is the "primary" type shown by --list; the rest are surfaced by --all.
+  #   cmd  - active sub-commands (the default)
+  #   red  - red: test cases not yet passing
+  #   wip  - work in progress, not yet stable
+  #   obs  - obsolete; kept for reference but not surfaced
+  #   test - test scripts
+  #   spec - specification scripts (g_walk_commands target)
   g_types=( cmd red wip obs test spec )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
@@ -815,34 +823,6 @@ function g_listCmds()
   g_eachSubMetaDo c_select p_scriptEntry "${crumbs}" && echo
   g_eachSubMetaDo $s_select_fn p_scriptEntry "${crumbs}" && echo
   :
-}
-
-function g_listAllSubCmds_XXX()
-{
-  local crumbs
-
-  if [[ -z ${1+x} ]]; then
-    list=() 
-    crumbs="E${breadcrumbs}E"
-  else
-    crumbs="$1 ${crumb}"
-  fi
- 
-  # p_kv breadcrumbs "$breadcrumbs $g_next $s_cmd $c_cmd"
-
-  local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
-
-  u_includes list "$crumbs" && return 0
- 
-  list+=($breadcrumbs)
-  [[ -z ${1+x} ]] && g_readConfig_TopLevel "$my_path"
-  g_readConfig "$c_path"
-
-  p_description
-
-  bold p_cmdDefaultEntry "$crumbs"
-  g_eachSubMetaDo $s_select_fn p_scriptEntry "$crumbs" && echo || true
-  g_eachSubMetaDo c_select g_listAllSubCmds "$crumbs" && echo || true
 }
 
 function g_walk_commands ()
