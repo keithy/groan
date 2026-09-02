@@ -89,7 +89,7 @@ function g_readConfig () # from conf files
   #   wip  - work in progress, not yet stable
   #   obs  - obsolete; kept for reference but not surfaced
   #   test - test scripts
-  #   spec - specification scripts (g_walk_commands target)
+  #   spec - specification scripts
   g_types=( cmd red wip obs test spec )
   
   g_tmp=/tmp # TempDir for Linux ... or Windows
@@ -823,72 +823,6 @@ function g_listCmds()
   g_eachSubMetaDo c_select p_scriptEntry "${crumbs}" && echo
   g_eachSubMetaDo $s_select_fn p_scriptEntry "${crumbs}" && echo
   :
-}
-
-function g_walk_commands ()
-{
-  # Populate c_file_list[] and crumbsList[] with every command suite
-  # reachable from the current g_locations[] through dispatcher aliases.
-  # The walker follows <X>.sub.<Y>.cmd.<Z>.sh dispatchers but does NOT
-  # re-source any sub-command scripts — it just enumerates reachable
-  # suites and the breadcrumb to reach each one.
-  #
-  # Also populates c_locations_list[] with a NUL-separated list of
-  # g_locations entries per level, so callers can find per-level files
-  # (e.g. topic files) without re-running g_readConfig.
-  #
-  # Caller must have run g_readConfig so c_dir/c_file/g_locations are set.
-  c_file_list=()
-  crumbsList=()
-  c_locations_list=()
-  _walked=()
-  _g_walk_commands_visit "$c_file" "${c_dir}" ""
-}
-
-function _g_walk_commands_visit ()
-{
-  local c_file="$1" c_dir="$2" crumbs="$3"
-  local key="${c_file}@${c_dir}"
-
-  $GDEBUG && printf "walk: %-20s @ %s  (crumbs: %s)\n" "$c_file" "$c_dir" "${crumbs:-<top>}"
-
-  local _w _found
-  _found=false
-  for _w in "${_walked[@]+"${_walked[@]}"}"; do
-    [[ "$_w" == "$key" ]] && _found=true && break
-  done
-  if $_found ; then
-    $GDEBUG && echo "  (already visited, skip)"
-    return 0
-  fi
-  _walked+=("$key")
-
-  c_file_list+=("$c_file")
-  crumbsList+=("$crumbs")
-
-  # Read the per-command config so g_locations[] reflects this level.
-  g_readConfig "${c_dir}/${c_file}"
-  # Snapshot g_locations for this level using NUL as separator so callers
-  # can iterate per-level files without losing context after the walk.
-  local _loc=""
-  local _d
-  for _d in "${g_locations[@]}"; do
-    _loc+="${_loc:+$'\x1f'}${_d}"
-  done
-  c_locations_list+=("$_loc")
-
-  local s_dir s_path
-  for s_dir in "${g_locations[@]}" ; do
-    for s_path in "$s_dir"/*.sub.*.cmd.* ; do
-      [[ -f "$s_path" ]] || continue
-      g_parseScriptPathMore "$s_path"
-      $s_isDispatcher || continue
-      [[ -n "$s_dest_cmd" ]] || continue
-      # The dispatcher file lives in <s_dir>; the destination suite lives
-      # alongside <s_dir>'s parent. Walk into it.
-      _g_walk_commands_visit "$s_dest_cmd" "${s_dir%/*}/${s_dest_cmd}" "${crumbs} ${s_sub_cmd}"
-    done
-  done
 }
 
 function g_listAllSubCmds ()
