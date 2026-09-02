@@ -794,14 +794,14 @@ function p_cmdDefaultEntry ()
 }
 
 function g_listCmds()
-{	
-  local crumbs
+{
+	local crumbs
 
-  if [[ -z ${1+x} ]]; then
-    crumbs="«${breadcrumbs}»"
-  else
-    crumbs="Z$1Z"
-  fi
+	if [[ -z ${1+x} ]]; then
+		crumbs="«${breadcrumbs}»"
+	else
+		crumbs="Z$1Z"
+	fi
 
   local bw=$(( ${#crumbs} + ${breadcrumbs_width:-20} ))
  
