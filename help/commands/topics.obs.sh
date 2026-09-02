@@ -17,7 +17,7 @@ function list_topics()
   local c_file="$1"
   local crumbs="$2"
  
-  g_readCustom "$c_file"
+  g_readConfig "${c_dir}/${c_file}"
 
   for s_dir in ${g_locations[@]} ; do
     local first=true
@@ -39,7 +39,7 @@ function list_topics()
 
 c_file_list=()
 crumbsList=()
-g_findCommands "${g_file}" ${g_file}
+g_walk_commands
 
 
 TOPIC="${1:-}"
@@ -58,7 +58,7 @@ fi
 if [ -n "$TOPIC" ]; then
   for i in "${!c_file_list[@]}"
   do
-    g_readCustom "${c_file_list[i]}"
+    g_readConfig "${c_dir}/${c_file_list[i]}"
 
     for s_dir in ${g_locations[@]} ; do
   
