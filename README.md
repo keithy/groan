@@ -20,8 +20,8 @@ Clone this repository, and rename 'groan' to be the top level name of YOUR comma
 Add your scripts (in any language) and help topics, to the `commands` folder. 
 
 Your command can be nested within other commands, or you can compose your command from others. 
-The help facilities are provided by the enclosed command `helper`, and the remote upload and execution capability
-is provided by the command `sensible`. Pick and choose modules that you wish to include.
+Pick and choose modules from the `commands/`, `setup-utility/`, `utilities-tool/`, and
+`tests/` folders that you wish to include in your command.
 
 ## Commands with sub-commands and sub-sub-commands...
 
@@ -33,9 +33,8 @@ Support for standard options like --debug, --quiet is also included.
 Groan is recursively merge-able/compose-able. Assemble a named suite of sub-command scripts in a folder, 
 that folder may be made available alongside, or nested as sub-commands within another suite.
 
-Groan uses/demonstrates this internally to implement the help sub-command. 
-The `groan help` sub-command of `groan` is implemented by the nested folder of commands `helper/commands`.
-The mapping is implemented by the command: `help.sub.helper.cmd._dispatch.sh`
+Sub-commands in one folder can act as dispatchers into another folder's command suite, following the
+`<name>.sub.<target>.cmd.<entry>.sh` naming convention.
 
 ## How to fork and roll your own command
 
@@ -69,9 +68,10 @@ based projects.
 * sub-commands may have metadata for help
 * sub-commands can run as source, exec, or eval
 * help included provides:
-	* list of help topics - `groan help topics` / `groan topics`
-	* list of commands and their usage - `groan help commands` / `groan commands`
-	
+	* `--list` — list sub-commands of the current level
+	* `--all` — recursively list every sub-command in every reachable
+	  sub-command suite, with descriptions
+
 ## General Principles
 
 Groan (sub)commands are called after having:
@@ -108,17 +108,15 @@ Groan looks for config files in a number of places. This can be configured in `g
 * `<name>.cmd.exec` will exec the <name>.cmd.exec
 * `<name>.cmd.su` will sudo the <name>.cmd.exec
 * `<name>.cmd.*` will eval the <name>.cmd.*
-	* `<name>.smd.rb`
+	* `<name>.cmd.rb`
 
 Non-shell scripts provide their help metadata via `<name>.cmd.conf`
 
-### Subcommand - help topics (provided by `helper`)
+#### Help topics
 
-The help sub-cmd included provides:
-
-* Display text file giving information on a topic e.g. `groan help topic test-topic`
-	* `<topicname>.topic.txt` e.g. `test-topic.topic.txt`    
-	* `<topicname>.topic.md`  e.g. `test-topic.topic.md`
+Help topics are user-facing documentation files that you can place anywhere
+on `g_locations[]`. They are text files with the extension `.topic.txt` or
+`.topic.md`; the basename (without `.topic.<ext>`) is the topic name.
 
 #### Help Meta Data
 
@@ -156,12 +154,10 @@ A number of template conf files can be provided, the user can choose a file and 
 
 ## Sub-command aliasing
 
-The script `groan/commands/help.sub.helper.cmd._dispatch.sh` implements aliasing of one sub-command to another.
-If you copy this script and rename to `assistant.sub.helper.cmd._dispatch.sh` then the new `assistant` command
-will be handled by the enclosed `helper` command via `../helper/commands/_dispatch.sh`.
-
-Aliasing can also be done, directly to another command e.g. `commands.sub.helper.cmd.commands.sub.sh`
-and within the same suite. e.g. `crumbs.sub..cmd.breadcrumbs.sub.sh`
+A dispatcher script named `<X>.sub.<Y>.cmd.<Z>.<ext>` aliases sub-command `<X>` to
+the `<Y>` command suite, passing `<Z>` as the entry sub-command. Place such a
+script in the parent's `commands/` folder; the framework recognises the
+`*.sub.*.cmd.*` pattern and follows the dispatcher when recursing.
 
 ## Test Suite
 
