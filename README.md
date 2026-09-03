@@ -72,6 +72,30 @@ based projects.
 	* `--all` — recursively list every sub-command in every reachable
 	  sub-command suite, with descriptions
 
+## Debug options
+
+The framework has four debug levels, each enabling a different kind
+of trace output. They can be combined.
+
+* `-D` / `--debug` — user-level debug. Sets `DEBUG=true` and
+  `VERBOSE=true`. Most sub-commands check this to print extra
+  detail.
+* `-DD` / `--ddebug` / `--deep-debug` — developer deep debug.
+  For sub-command code that distinguishes user vs developer traces.
+* `-GD` / `--groan-debug` — groan's own trace. Sets `GDEBUG=true`
+  and turns on verbose mode. Logs the dispatcher scanning
+  (`Scanning for test*.cmd.* in: ...`), the result of each match
+  (`Found #1 : ... : ...`), and the path taken when sourcing
+  sub-commands. Useful when a sub-command isn't being found.
+* `-CD` / `--config-debug` — config-file trace. Sets `CDEBUG=true`
+  and turns on verbose mode. Logs the config-file search path
+  (`Custom1? $PWD/groan.conf`, `Config  < $PWD/config/other.conf`,
+  etc.) so you can see which `.conf` files are considered and which
+  one is sourced. Combine with `-GD` to see both at once.
+* `-XD` / `--bash-debug` — `set -x` trace. Prints every command
+  as bash executes it. Very noisy; use only when you need the full
+  command trace.
+
 ## General Principles
 
 Groan (sub)commands are called after having:
