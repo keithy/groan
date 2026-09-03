@@ -829,7 +829,15 @@ function g_listCmds()
 	local crumbs
 
 	if [[ -z ${1+x} ]]; then
-		crumbs="${breadcrumbs}"
+		# When invoked from inside a sub-suite (e.g. via a dispatcher's
+		# g_actions fallback), c_cmd carries the sub-suite's name and
+		# breadcrumbs is still the top-level value. Mirror g_listAllSubCmds
+		# logic so the same fix applies.
+		if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]]; then
+			crumbs="${breadcrumbs} ${s_sub_cmd:-${c_cmd}}"
+		else
+			crumbs="${breadcrumbs}"
+		fi
 	else
 		crumbs="$1"
 	fi
@@ -854,7 +862,19 @@ function g_listAllSubCmds ()
 
   if [[ -z ${1+x} ]]; then
     list=()
-    crumbs="${breadcrumbs}"
+    # When --all is dispatched from inside a sub-suite (e.g. from a
+    # dispatcher's g_actions), we are NOT running at the top level.
+    # c_cmd will have been set by the dispatcher's g_readConfig to the
+    # sub-suite's command name (e.g. "setup-utility"), but the user
+    # invoked the dispatcher alias ("setup"). The dispatcher sets
+    # s_sub_cmd to the alias name; prefer that over c_cmd for the
+    # breadcrumb so listings show "groan setup configure" rather than
+    # "groan setup-utility configure".
+    if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]]; then
+      crumbs="${breadcrumbs} ${s_sub_cmd:-${c_cmd}}"
+    else
+      crumbs="${breadcrumbs}"
+    fi
   else
     crumbs="$1 ${crumb:-}"
   fi
@@ -866,15 +886,20 @@ function g_listAllSubCmds ()
   u_includes list "$crumbs" && return 0
 
   list+=("$crumbs")
-  [[ -z ${1+x} ]] && g_readConfig_TopLevel "$my_path"
-  g_readConfig "$c_path"
+  # The dispatcher that called us has already re-anchored g_subcmd_locations
+  # to its destination suite via g_readConfig. The top-level framework has
+  # already been configured by the entry-point g_readConfig_TopLevel call.
+  # Re-anchoring here would overwrite g_file and breadcrumbs (currently
+  # $my_path = dispatcher's path, not the top-level entry's), which would
+  # break descriptions and default-entry breadcrumbs throughout the
+  # listing. Do nothing on this line.
 
   # Snapshot g_locations BEFORE sourcing any sub-commands. Dispatcher
   # files themselves call g_readConfig to re-anchor to their destination
   # suite, which mutates g_locations. Without this snapshot, the for
   # loop below would scan the destination's commands, not this level's.
   local -a iteration_locations
-  iteration_locations=("${g_locations[@]}")
+  iteration_locations=("${g_subcmd_locations[@]}")
 
   p_description
 
@@ -907,7 +932,7 @@ function g_listAllSubCmds ()
 
       # Restore g_locations so the next iteration of the for loop scans
       # the caller's commands, not the destination's.
-      g_locations=("${iteration_locations[@]}")
+      g_subcmd_locations=("${iteration_locations[@]}")
     done
   done
 }
