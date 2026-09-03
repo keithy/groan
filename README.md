@@ -20,7 +20,7 @@ Clone this repository, and rename 'groan' to be the top level name of YOUR comma
 Add your scripts (in any language) and help topics, to the `commands` folder. 
 
 Your command can be nested within other commands, or you can compose your command from others. 
-Pick and choose modules from the `commands/`, `setup-utility/`, `utilities-tool/`, and
+Pick and choose modules from the `commands/`, `setup-utility/`, and
 `tests/` folders that you wish to include in your command.
 
 ## Commands with sub-commands and sub-sub-commands...
