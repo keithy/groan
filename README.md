@@ -93,7 +93,9 @@ All subcommands support
 
 ## Config Files
 
-Groan looks for config files in a number of places. This can be configured in `groan.locations.sh`
+Groan looks for config files in a number of places. The set of
+locations is set in the `<exe>.conf` file (or by overriding
+`g_config_file_locations` directly).
 
 ```
 	"$g_home/$c_file.conf"                       # --local
@@ -102,15 +104,38 @@ Groan looks for config files in a number of places. This can be configured in `g
 
 ## Sub-Commands
 
-...follow the convention `commands/<c_sub_cmd>.sub.sh`
+Sub-commands are files in `commands/` whose names encode how the
+framework should invoke them. The extension after the last `.` selects
+the dispatch mode:
 
-* `<name>.cmd.sh` will directly source the shell file <name>.cmd.sh
-* `<name>.cmd.exec` will exec the <name>.cmd.exec
-* `<name>.cmd.su` will sudo the <name>.cmd.exec
-* `<name>.cmd.*` will eval the <name>.cmd.*
-	* `<name>.cmd.rb`
+* `<name>.cmd.sh`     — `source` the file in the current shell
+* `<name>.cmd.conf`   — `source` the file as a metadata-only conf (no body run)
+* `<name>.cmd.exec`   — `exec` the file as a new process
+* `<name>.cmd.su`     — `sudo` then run the file
+* `<name>.cmd.ps1`    — run the file under PowerShell
+* `<name>.cmd.<ext>`  — any other extension is `eval`'d; the file is
+                        resolved via `realpath` and must live under
+                        `g_subcmd_locations[]` for safety
 
-Non-shell scripts provide their help metadata via `<name>.cmd.conf`
+Non-shell scripts can supply their help metadata via `<name>.cmd.conf`
+without the file being executable.
+
+#### Dispatcher aliases
+
+A sub-command in one folder can alias to a sub-command suite in
+another folder. The naming convention is:
+
+```
+<X>.sub.<Y>.cmd.<Z>.<ext>
+```
+
+Where `<X>` is the alias name, `<Y>` is the destination command suite,
+and `<Z>` is the entry sub-command to pass to that suite. The framework
+recognises `*.sub.*.cmd.*` as a dispatcher pattern and follows the
+alias when `--all` recurses.
+
+For example, `commands/nested.sub.nested.cmd.sh` in the parent suite
+makes `groan nested` invoke `./nested/nested` with no argument.
 
 #### Help topics
 
