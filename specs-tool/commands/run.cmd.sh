@@ -1,24 +1,28 @@
 # groan.specs.run.sh
 #
-# ./groan specs run <tool>          run the spec suite at <tool>/specs or <tool>/tests
-# ./groan specs run --all-suites     run every suite under groan/*/specs|groan/*/tests
-# ./groan specs run --list-suites    list runnable suites without executing them
+# ./groan specs run <tool>     run the spec suite at <tool>/specs or <tool>/tests
+# ./groan specs run --all      run every suite under groan/*/specs|groan/*/tests
+# ./groan specs run --list     list runnable suites without executing them
 
 me "$BASH_SOURCE" #tradition
 
 command="run"
 s_description="run a tool's spec/test suite"
 s_usage=\
-"$breadcrumbs                              # list tools with suites
-$breadcrumbs run <tool>                    # run that tool's suite
-$breadcrumbs run --all-suites              # run every suite
-$breadcrumbs run --list-suites             # list runnable suites"
+"$breadcrumbs                          # list tools with suites
+$breadcrumbs run <tool>                # run that tool's suite
+$breadcrumbs run --all                 # run every suite
+$breadcrumbs run --list                # list runnable suites"
 
 $METADATAONLY && return
 
+# A sourced sub-command script (cmd.sh) inherits the calling function's
+# positional parameters via $@ because bash's `source` does not reset
+# them. So flag arguments like --all and --list are available here even
+# though the framework declared --all/--list as g_option* (those fire
+# only inside g_actions for the fallback path).
+
 # Whitelist of file patterns we recognise as a runnable suite.
-# Excludes dispatcher aliases (*.sub.*.cmd.*) and library sources
-# (specs-tool/lib/*) which look like tests but aren't.
 match_spec() {
   local p="$1"
   case "$p" in
@@ -30,24 +34,18 @@ match_spec() {
   esac
 }
 
-# The framework passes extra arguments via the global args[] array, not
-# via positional parameters ($1, $@). We accept flags or a tool name
-# from the first element of args[].
-arg1="${args[0]:-}"
-
 # Parent of specs-tool/, i.e. the tool tree where user-added tools live.
 groan_root="${my_path%/*/*/*}"
 
-case "$arg1" in
-  --list-suites)
+case "${1:-}" in
+  --list)
     while IFS= read -r suite; do
       match_spec "$suite" || continue
-      tool=$(echo "$suite" | sed "s|^$groan_root/||;s|/.*||")
       printf "  %s\n" "$suite"
     done < <(find "$groan_root" -type f \( -name '*.spec.sh' -o -name '*.test.sh' \) 2>/dev/null | sort)
     ;;
 
-  --all-suites)
+  --all)
     failures=0
     while IFS= read -r suite; do
       match_spec "$suite" || continue
@@ -60,12 +58,12 @@ case "$arg1" in
 
   "")
     echo "specs: missing tool name or flag"
-    echo "Try: $breadcrumbs run --all-suites"
+    echo "Try: $breadcrumbs run --all"
     exit 1
     ;;
 
   *)
-    tool="$arg1"
+    tool="$1"
     suite_dir="$groan_root/$tool/specs"
     [[ -d "$suite_dir" ]] || suite_dir="$groan_root/$tool/tests"
     if [[ ! -d "$suite_dir" ]]; then

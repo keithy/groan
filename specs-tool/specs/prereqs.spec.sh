@@ -8,6 +8,11 @@
 #
 # This is the suite specs-tool itself owns. Run via:
 #   ./groan specs run specs-tool
+#
+# Note: --list and --all here are local flags handled by run.cmd.sh;
+# they reach the sourced cmd.sh via $@ (bash's `source` doesn't
+# reset positional parameters). They are NOT the framework's
+# g_option--list / g_option--all (those fire only inside g_actions).
 
 s_description="specs-tool prereqs and end-to-end wiring"
 s_opts=" "
@@ -88,6 +93,5 @@ describe "specs-tool end-to-end" && {
   # suite from outside: `./groan specs run specs-tool`.
   #
   # We do test the runner's CLI wiring (`list`, `run`, `--help`) so the
-  # dispatcher path is exercised, then trust the `--all-suites` form
-  # based on a manual run for which bash recursion isn't an issue.
+  # dispatcher path is exercised. `run --all` is verified manually.
 }
