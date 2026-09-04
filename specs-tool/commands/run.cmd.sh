@@ -76,12 +76,15 @@ colour_filter() {
 # for the caller.
 run_suite() {
   local suite="$1" mode="$2"
+  local suite_dir suite_name
+  suite_dir="$(dirname -- "$suite")"
+  suite_name="$(basename -- "$suite")"
   if [[ "$mode" == summarised ]]; then
-    out=$(bash "$suite" 2>&1)
+    out=$(cd "$suite_dir" && bash "./$suite_name" 2>&1)
     rc=$?
     printf "%s\n" "$out" | colour_filter
   else
-    bash "$suite"
+    (cd "$suite_dir" && bash "./$suite_name")
     rc=$?
   fi
   if [[ $rc -eq 0 ]]; then SUITE_STATUS=pass; else SUITE_STATUS=fail; fi
@@ -162,7 +165,9 @@ case "${1:-}" in
     while IFS= read -r suite; do
       match_spec "$suite" || continue
       echo "--- $suite ---"
-      bash "$suite" || failed=$((failed+1))
+      suite_dir="$(dirname -- "$suite")"
+      suite_name="$(basename -- "$suite")"
+      (cd "$suite_dir" && bash "./$suite_name") || failed=$((failed+1))
     done < <(list_suites "$suite_dir")
     exit "$failed"
     ;;

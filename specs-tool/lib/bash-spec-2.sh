@@ -44,7 +44,7 @@ function rerun_in_clean_bash () {
   local script="${this:-${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}}"
   exec env -i _CLEAN_=1 \
     PWD="$PWD" \
-    PATH="$PATH" \
+    PATH="$PATH:/usr/bin:/bin:/usr/local/bin" \
     HOME="$HOME" \
     LOUD="${LOUD:-true}" \
     VERBOSE="${VERBOSE:-false}" \
