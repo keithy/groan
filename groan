@@ -1129,8 +1129,8 @@ function g_option--origin ()
 
 g_options+="--temp ; the temp directory\n"
 function g_option--temp  () { echo "$g_tmp"  ; }
-g_options+="--env ; the environment\n"
-function g_option--env  () { set  ; }
+g_options+="--env ; the environment (filtered: no functions)\n"
+function g_option--env  () { env -0 | grep -zv '^[A-Za-z_][A-Za-z0-9_]*\(\)' | tr '\0' '\n' | sort ; }
 
 g_options+="--which ; path of the executable\n"
 function g_option--which () { echo "$g_path" ; }

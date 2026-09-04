@@ -25,7 +25,7 @@ $GDEBUG && echo "Command: '$command'"
 
 g_declare_options SHOWCONFIG EDITCONFIG SHOWOPTIONS INSTALL GETFILE
 
-configure_name="$CONFIG"
+configure_name="${CONFIG:-}"
 config_option=""
 SHOWCONFIG=true
 
@@ -206,7 +206,7 @@ if $SHOWOPTIONS; then
     foreach_preset_do "*" p_preset_name
 
     echo
-    printf "Current setting: " ; p_path "${g_config_name:-none (no config) ($CONFIG not found)}"
+    printf "Current setting: " ; p_path "${g_config_name:-none (no config) (${CONFIG:-} not found)}"
     echo
 fi
 
@@ -223,7 +223,7 @@ if $SHOWCONFIG; then
     foreach_preset_do "$match" p_preset_file || exit 0
 
     echo
-    printf "Current setting: $CONFIG ($match.conf not found)"
+    printf "Current setting: ${CONFIG:-} ($match.conf not found)"
     echo
 
     exit 1 
@@ -236,7 +236,7 @@ if $EDITCONFIG; then
     foreach_config_do "$match" edit_config_file || exit 0
 
     echo
-    printf "Current setting: " ; p_path "${g_config_name:-$CONFIG ($CONFIG.conf not found)}"
+    printf "Current setting: " ; p_path "${g_config_name:-${CONFIG:-} (${CONFIG:-}.conf not found)}"
     echo
 
     exit 1
