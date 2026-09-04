@@ -231,7 +231,7 @@ function u_splitInto() {
 # > example
 # > EOF
 #
-function u_define () { IFS='\n' read -r -d '' ${1} || true; }
+function u_define () { IFS=$'\n' read -r -d '' "${1}" || true; }
 
 function u_includes ()
 {
