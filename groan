@@ -681,11 +681,9 @@ function g_aliasDispatch ()
 function g_nextDispatch ()
 {
   if g_shiftInto_g_next; then
-    crumbs+=" K${g_next}K"
     g_dispatch "$g_next"
   else
     [[ "${s_path}" == "${g_path}" ]] && g_optionsTopLevelOnly
-    crumbs+="$breadcrumbs N${crumb:-}N"
     g_actions
   fi
 }
