@@ -967,7 +967,8 @@ function _g_optionsTopLevelOnly ()
   }
 
   g_options+="--completion ; generate bash autocompletion script\n"
-  function g_option--completion ()
+  function g_option--completion () { g_option---completion "$@"; }
+  function g_option---completion ()
   {
     local name="$g_cmd"
     if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
@@ -1268,7 +1269,6 @@ function g_handleAutocomplete ()
       "--version"
       "--install"
       "--uninstall"
-      "--completion"
       "--update"
       "--configs"
       "--origin"
@@ -1298,7 +1298,7 @@ function g_handleAutocomplete ()
     fn="${fn##* }"
     if [[ "$fn" == g_option--* ]]; then
       opt_name="${fn#g_option}"
-      if [[ "$opt_name" != "---AUTOCOMPLETE" ]]; then
+      if [[ "$opt_name" != -* ]]; then
         parsed_opts+=("$opt_name")
       fi
     fi
