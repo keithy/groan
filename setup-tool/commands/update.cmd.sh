@@ -6,22 +6,32 @@ $GDEBUG && echo "${dim}${BASH_SOURCE[0]}${reset}"
 
 command="update"
 s_description="self-update ${g_file}"
+s_opts=\
+"
+--code           pull latest framework/tool code from git
+"
 s_usage=\
-"$breadcrumbs                  # update tool data
-$breadcrumbs --code --confirm # update code"
+"$breadcrumbs                         # update tool data libraries (if defined)
+$breadcrumbs --code --confirm        # pull latest code from git"
 
 $METADATAONLY && return
 
 $GDEBUG && echo "Command: '$command'"
 
 UPDATE_CODE=false
-UPDATE_DATA=true
+UPDATE_DATA=false
+HAD_ACTION=false
+
+if [[ $# -eq 0 ]]; then
+	UPDATE_DATA=true
+fi
 
 for arg in "$@"
 do
   case "$arg" in
     --code)
 	    UPDATE_CODE=true
+	    HAD_ACTION=true
     ;;
     -*)
     # ignore other options
@@ -32,10 +42,9 @@ do
   esac
 done
 
-if $UPDATE_DATA; then
-	# Update any libraries from repoitories
-	if [[ -n ${repositories+x} ]]; then
-
+if $UPDATE_DATA || ! $HAD_ACTION; then
+	# Update any libraries from repositories
+	if [[ -n ${repositories+x} && ${#repositories[@]} -gt 0 ]]; then
 		repo_directory="${repo_directory:-${g_dir}/library}"
 	
 		for repo in "${repositories[@]}"; do
@@ -48,6 +57,11 @@ if $UPDATE_DATA; then
 
 			$LOUD && echo "Data files updated (${repo_name})"
 		done
+	else
+		if ! $UPDATE_CODE; then
+			p_echo "No data repositories configured to update."
+			p_echo "Use '${breadcrumbs} --code --confirm' to pull latest code."
+		fi
 	fi
 fi
 

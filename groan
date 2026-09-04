@@ -313,6 +313,7 @@ function _g_executeScriptPath ()
         $XDEBUG && set -x
         g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}"
         $XDEBUG && set +x
+        $SHOWHELP && g_displayHelp && exit 0
     ;;
     exec)
         $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
