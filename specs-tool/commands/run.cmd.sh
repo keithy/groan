@@ -16,9 +16,9 @@ command="run"
 s_description="run a tool's spec/test suite"
 s_usage=\
 "$breadcrumbs                          # list tools with suites
-$breadcrumbs run <tool>                # run that tool's suite (full output)
-$breadcrumbs run --all                 # run every suite (summarised, √/X)
-$breadcrumbs run --list                # list runnable suites"
+$breadcrumbs <tool>                   # run that tool's suite (full output)
+$breadcrumbs --all                    # run every suite (summarised, √/X)
+$breadcrumbs --list                   # list runnable suites"
 
 $METADATAONLY && return
 

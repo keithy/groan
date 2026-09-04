@@ -283,7 +283,7 @@ function g_executeScriptPath ()
 
 function _g_executeScriptPath ()
 {  
-  g_parseScriptPath "$1"
+  g_parseScriptPathMore "$1"
   #s_alias="${s_alias:-$s_cmd}" 
   # When set -u is enabled bash<=4.1, this pattern
   # is needed: "${args[@]:+${args[@]}}"
@@ -692,7 +692,10 @@ function g_dispatch ()
 {
   if g_findSubCommandScript "${1}"; then
 
+    local prev_breadcrumbs="$breadcrumbs"
+    breadcrumbs+=" ${s_sub_cmd:-$s_cmd}"
     g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
+    breadcrumbs="$prev_breadcrumbs"
 
     $SHOWHELP && g_displayHelp && exit 0
     $METADATAONLY && return 0 || exit 0
@@ -771,7 +774,7 @@ function g_eachSubMetaDo ()
       for path in "$dir"/*.$type.*
       do
         if [[ -f "$path" ]]; then
-          unset s_alias  s_path c_dir s_dir s_description c_cmd
+          unset s_alias  s_path c_dir s_dir s_description c_cmd s_sub_cmd
           METADATAONLY=true g_executeScriptPath "$path" ""
           $filter && $action ${@} && found=true
         fi
@@ -798,7 +801,7 @@ function c_select ()
 
 function p_scriptEntry ()
 { 
-  p_c1 "${1} ${s_cmd}" ; p_command_list_description
+  p_c1 "${1} ${s_sub_cmd:-$s_cmd}" ; p_command_list_description
 
   [[ "$type" != "${g_types[0]}" ]] && printf " ($type)"
   echo
@@ -827,11 +830,7 @@ function g_listCmds()
 	local crumbs
 
 	if [[ -z ${1+x} ]]; then
-		# When invoked from inside a sub-suite (e.g. via a dispatcher's
-		# g_actions fallback), c_cmd carries the sub-suite's name and
-		# breadcrumbs is still the top-level value. Mirror g_listAllSubCmds
-		# logic so the same fix applies.
-		if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]]; then
+		if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]] && [[ "${breadcrumbs}" != *"${s_sub_cmd:-${c_cmd}}"* ]]; then
 			crumbs="${breadcrumbs} ${s_sub_cmd:-${c_cmd}}"
 		else
 			crumbs="${breadcrumbs}"
@@ -860,15 +859,7 @@ function g_listAllSubCmds ()
 
   if [[ -z ${1+x} ]]; then
     list=()
-    # When --all is dispatched from inside a sub-suite (e.g. from a
-    # dispatcher's g_actions), we are NOT running at the top level.
-    # c_cmd will have been set by the dispatcher's g_readConfig to the
-    # sub-suite's command name (e.g. "setup-utility"), but the user
-    # invoked the dispatcher alias ("setup"). The dispatcher sets
-    # s_sub_cmd to the alias name; prefer that over c_cmd for the
-    # breadcrumb so listings show "groan setup configure" rather than
-    # "groan setup-utility configure".
-    if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]]; then
+    if [[ -n "${c_cmd+x}" ]] && [[ "${c_cmd}" != "${g_cmd}" ]] && [[ "${breadcrumbs}" != *"${s_sub_cmd:-${c_cmd}}"* ]]; then
       crumbs="${breadcrumbs} ${s_sub_cmd:-${c_cmd}}"
     else
       crumbs="${breadcrumbs}"
