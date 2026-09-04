@@ -70,7 +70,10 @@ function me () # BASH_SOURCE
 
 function g_readConfig () # from conf files
 {
+  local saved_sub_cmd="${s_sub_cmd:-}" saved_cmd="${s_cmd:-}"
   g_parseScriptPath "$1"
+  [[ -n "$saved_sub_cmd" ]] && s_sub_cmd="$saved_sub_cmd"
+  [[ -n "$saved_cmd" ]] && s_cmd="$saved_cmd"
   local commands_folder="${2:-commands}"
 
   c_dir="$s_dir"
@@ -643,6 +646,7 @@ function g_parseScriptPath ()
   s_ext="${s_file##*.}"     # name, remove up to last '.'
   s_base="${s_file%.*}"     # name, keep up to last '.'
   s_rest="${s_base#*.*.}"   # base, remove up to second dot
+  s_sub_cmd=""
 }
 
 # Extended parser used to recognise dispatcher aliases of the form
@@ -928,7 +932,6 @@ function g_listAllSubCmds ()
   done
 }
 
-<<<<<<< HEAD
 function g_option---completion ()
 {
   local name="$g_cmd"
@@ -1166,32 +1169,6 @@ function g_handleAutocomplete ()
         done
       done
     done
-<<<<<<< HEAD
-=======
-  done
-
-  local common_opts=(
-    "--help" "-H"
-    "--quiet" "-Q"
-    "--verbose" "-V"
-    "--debug" "-D"
-    "--dry-run" "-N"
-    "--confirm" "-Y"
-    "--config=" "-C="
-    "--theme="
-    "--ddebug" "-DD"
-    "--groan-debug" "-GD"
-    "--config-debug" "-CD"
-    "--bash-debug" "-XD"
-  )
-
-  if ! $navigated_subcmd; then
-    common_opts+=(
-      "--list"
-      "--all"
-      "--list-all"
-    )
->>>>>>> 4ac3990 (refactor: rename setup-utility to setup-tool and outsource setup options)
   fi
 
   if [[ "$cur_word" == -* ]]; then

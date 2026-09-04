@@ -7,13 +7,13 @@ me "$BASH_SOURCE" #tradition
 command="environment"
 s_description="show script/environment variables"
 s_usage="usage:
-$breadcrumbs environment 
-$breadcrumbs environment [--all|-a]
-$breadcrumbs environment [--which]
-$breadcrumbs environment [--temp]
-$breadcrumbs environment [--origin]
-$breadcrumbs environment [--eval \"expr\"] - evaluate expression in script context
-$breadcrumbs environment --help"
+$breadcrumbs 
+$breadcrumbs [--all|-a]
+$breadcrumbs [--which]
+$breadcrumbs [--temp]
+$breadcrumbs [--origin]
+$breadcrumbs [--eval \"expr\"] - evaluate expression in script context
+$breadcrumbs --help"
 
 $METADATAONLY && return
 

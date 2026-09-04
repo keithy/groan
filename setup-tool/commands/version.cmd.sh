@@ -2,7 +2,7 @@
 me "$BASH_SOURCE" #tradition
 
 s_description="show version information"
-s_usage="$breadcrumbs version"
+s_usage="$breadcrumbs"
 
 $METADATAONLY && return
 

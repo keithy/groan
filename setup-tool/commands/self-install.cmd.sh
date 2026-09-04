@@ -8,11 +8,11 @@ me "$BASH_SOURCE" #tradition
 command="self-install"
 s_description="install alias, autocompletion, or symlink in system"
 s_usage="usage:
-$breadcrumbs self-install --alias [name]
-$breadcrumbs self-install --unalias [name]
-$breadcrumbs self-install --completion [name]
-$breadcrumbs self-install /usr/local/bin --link
-$breadcrumbs self-install --unlink"
+$breadcrumbs --alias [name]
+$breadcrumbs --unalias [name]
+$breadcrumbs --completion [name]
+$breadcrumbs /usr/local/bin --link
+$breadcrumbs --unlink"
 
 $METADATAONLY && return
 
