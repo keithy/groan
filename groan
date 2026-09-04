@@ -526,8 +526,8 @@ function _g_bashrc_ ()
 
 cat <<RCD
 alias $name='${alias_text}' ##:$name:##
-_ac_$name () { COMPREPLY=( \$(${alias_text} \${COMP_WORDS[@]:1} -- ---AUTOCOMPLETE) ); } ##:$name:##
-# complete -F _ac_$name ${name}          ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} "\${COMP_WORDS[@]:1}" -- ---AUTOCOMPLETE) ); } ##:$name:##
+complete -F _ac_$name ${name} ##:$name:##
 RCD
 
 }
@@ -943,8 +943,12 @@ function _g_optionsTopLevelOnly ()
 
   function g_option--install ()
   {
-    g_bashrc_install "${2:-$g_cmd}" "$HOME/.bashrc" \
-      "${g_path/$HOME/\$HOME}${2+ ==g_cmd=}${2:-}${CONFIG+ --config=}${CONFIG:-}"
+    local name="$g_cmd"
+    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
+      name="$1"
+    fi
+    g_bashrc_install "${name}" "$HOME/.bashrc" \
+      "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
 
     $CONFIRM \
       && p_echo "To use the installed feature - start a new bash" \
@@ -953,9 +957,23 @@ function _g_optionsTopLevelOnly ()
 
   function g_option--uninstall ()
   {
+    local name="$g_cmd"
+    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
+      name="$1"
+    fi
     $CONFIRM \
-      && u_deleteLines "$HOME/.bashrc" "##:$g_cmd:##" \
+      && u_deleteLines "$HOME/.bashrc" "##:${name}:##" \
       || p_echo "DRY-RUN --confirm to apply"
+  }
+
+  g_options+="--completion ; generate bash autocompletion script\n"
+  function g_option--completion ()
+  {
+    local name="$g_cmd"
+    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
+      name="$1"
+    fi
+    _g_bashrc_ "${name}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
   }
 
   s_usage+="$breadcrumbs ; list commands\n"
@@ -1136,11 +1154,176 @@ me "${BASH_SOURCE}" # tradition
 
 g_readConfig_TopLevel "$my_path" && g_readConfig "$my_path"
 
-function g_option---AUTOCOMPLETE ()
+function g_handleAutocomplete ()
 {
-  compgen -W "$breadcrumbs" -- ${g_cmd}
+  local ac_words=()
+  local arg
+  for arg in "${args[@]:+${args[@]}}"; do
+    if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
+      break
+    elif [[ "$arg" == "--" ]]; then
+      continue
+    else
+      ac_words+=("$arg")
+    fi
+  done
+
+  local cur_word=""
+  local path_words=()
+
+  if [[ ${#ac_words[@]} -gt 0 ]]; then
+    cur_word="${ac_words[-1]}"
+    path_words=("${ac_words[@]:0:${#ac_words[@]}-1}")
+  fi
+
+  local navigated_subcmd=false
+  local pw
+  for pw in "${path_words[@]}"; do
+    [[ -z "$pw" ]] && continue
+    if [[ "$pw" == --config=* ]]; then
+      CONFIG="${pw#--config=}"
+      g_readConfig "$g_path"
+    elif [[ "$pw" == -C=* ]]; then
+      CONFIG="${pw#-C=}"
+      g_readConfig "$g_path"
+    elif [[ "${pw:0:1}" == "-" ]]; then
+      continue
+    else
+      if g_findSubCommandScript "$pw"; then
+        navigated_subcmd=true
+        g_parseScriptPathMore "$s_path"
+        if $s_isDispatcher && [[ -n "$s_dest_path" ]]; then
+          g_readConfig "$s_dest_path"
+        else
+          METADATAONLY=true g_executeScriptPath "$s_path" ""
+        fi
+      fi
+    fi
+  done
+
+  if [[ "$cur_word" == --config=* ]] || [[ "$cur_word" == -C=* ]]; then
+    local prefix="${cur_word%%=*}="
+    local confs=()
+    local dir cf cname
+    for dir in "${g_config_file_locations[@]}"; do
+      for cf in "$dir"/*.conf; do
+        if [[ -f "$cf" ]]; then
+          cname="${cf##*/}"
+          cname="${cname%.conf}"
+          confs+=("${prefix}${cname}")
+        fi
+      done
+    done
+    if [[ ${#confs[@]} -gt 0 ]]; then
+      compgen -W "$(printf '%s\n' "${confs[@]}")" -- "$cur_word"
+      exit 0
+    fi
+  fi
+
+  if [[ "$cur_word" == --theme=* ]]; then
+    compgen -W "--theme=none --theme=off --theme=0 --theme=default" -- "$cur_word"
+    exit 0
+  fi
+
+  local cand_list=()
+  local dir type path name
+
+  for dir in "${g_subcmd_locations[@]}"; do
+    for type in "${g_types[@]}"; do
+      for path in "$dir"/*.$type.*; do
+        if [[ -f "$path" ]]; then
+          g_parseScriptPath "$path"
+          name=""
+          if [[ "$path" == *.sub.* ]]; then
+            g_parseScriptPathMore "$path"
+            name="${s_sub_cmd:-$s_cmd}"
+          else
+            name="$s_cmd"
+          fi
+          if [[ -n "$name" ]]; then
+            u_includes cand_list "$name" || cand_list+=("$name")
+          fi
+        fi
+      done
+    done
+  done
+
+  local common_opts=(
+    "--help" "-H"
+    "--quiet" "-Q"
+    "--verbose" "-V"
+    "--debug" "-D"
+    "--dry-run" "-N"
+    "--confirm" "-Y"
+    "--config=" "-C="
+    "--theme="
+    "--ddebug" "-DD"
+    "--groan-debug" "-GD"
+    "--config-debug" "-CD"
+    "--bash-debug" "-XD"
+  )
+
+  if ! $navigated_subcmd; then
+    common_opts+=(
+      "--version"
+      "--install"
+      "--uninstall"
+      "--completion"
+      "--update"
+      "--configs"
+      "--origin"
+      "--temp"
+      "--env"
+      "--which"
+      "--list"
+      "--all"
+      "--list-all"
+    )
+  fi
+
+  local opts_text="${g_options:-} ${s_opts:-}"
+  local parsed_opts=()
+  local opt
+  for opt in $opts_text; do
+    if [[ "$opt" == -* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
+      opt="${opt%%;*}"
+      opt="${opt%%|*}"
+      opt="${opt//[[:space:]]/}"
+      [[ -n "$opt" ]] && parsed_opts+=("$opt")
+    fi
+  done
+
+  local fn opt_name
+  while read -r fn; do
+    fn="${fn##* }"
+    if [[ "$fn" == g_option--* ]]; then
+      opt_name="${fn#g_option}"
+      if [[ "$opt_name" != "---AUTOCOMPLETE" ]]; then
+        parsed_opts+=("$opt_name")
+      fi
+    fi
+  done < <(declare -F 2>/dev/null || true)
+
+  for opt in "${common_opts[@]}" "${parsed_opts[@]}"; do
+    if [[ -n "$opt" ]]; then
+      u_includes cand_list "$opt" || cand_list+=("$opt")
+    fi
+  done
+
+  compgen -W "$(printf '%s\n' "${cand_list[@]}")" -- "$cur_word"
   exit 0
 }
+
+function g_option---AUTOCOMPLETE ()
+{
+  g_handleAutocomplete
+}
+
+for arg in "${args[@]:+${args[@]}}"; do
+  if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
+    g_handleAutocomplete
+  fi
+done
 
 [[ "$0" != "$BASH_SOURCE" ]] && return # being sourced, end it here
 
