@@ -59,7 +59,7 @@ based projects.
 
 ## Features
 
-* supports default option flags (--verbose --quiet --help --debug --dry-run --confirm --groan-debug)
+* supports default option flags (--verbose --quiet --help +debug --dry-run --confirm +groan-debug)
 * default means for platform determination
 * finds sub-commands via a configurable search path (allows local overides)
 * finds config files via a configurable search path
@@ -74,25 +74,24 @@ based projects.
 
 ## Debug options
 
-The framework has four debug levels, each enabling a different kind
-of trace output. They can be combined.
+The framework has debug levels prefixed with `+` to separate internal developer diagnostics from command options. They can be combined.
 
-* `-D` / `--debug` — user-level debug. Sets `DEBUG=true` and
+* `+D` / `+debug` — user-level debug. Sets `DEBUG=true` and
   `VERBOSE=true`. Most sub-commands check this to print extra
   detail.
-* `-DD` / `--ddebug` / `--deep-debug` — developer deep debug.
+* `+DD` / `+ddebug` / `+deep-debug` — developer deep debug.
   For sub-command code that distinguishes user vs developer traces.
-* `-GD` / `--groan-debug` — groan's own trace. Sets `GDEBUG=true`
+* `+GD` / `+groan-debug` — groan's own trace. Sets `GDEBUG=true`
   and turns on verbose mode. Logs the dispatcher scanning
   (`Scanning for test*.cmd.* in: ...`), the result of each match
   (`Found #1 : ... : ...`), and the path taken when sourcing
   sub-commands. Useful when a sub-command isn't being found.
-* `-CD` / `--config-debug` — config-file trace. Sets `CDEBUG=true`
+* `+CD` / `+config-debug` — config-file trace. Sets `CDEBUG=true`
   and turns on verbose mode. Logs the config-file search path
   (`Custom1? $PWD/groan.conf`, `Config  < $PWD/config/other.conf`,
   etc.) so you can see which `.conf` files are considered and which
-  one is sourced. Combine with `-GD` to see both at once.
-* `-XD` / `--bash-debug` — `set -x` trace. Prints every command
+  one is sourced. Combine with `+GD` to see both at once.
+* `+XD` / `+bash-debug` — `set -x` trace. Prints every command
   as bash executes it. Very noisy; use only when you need the full
   command trace.
 
@@ -102,11 +101,11 @@ Groan (sub)commands are called after having:
 
 * processed and filtered out the standard set of flags.
     * --verbose -V
-    * --debug -D
+    * +debug +D
     * --quiet 
     * --dry-run    # enabled by default
     * --confirm    # disables --dry-run flag for destructive operations
-    * --ddebug -DD # developer debug
+    * +ddebug +DD # developer debug
 * found and 'sourced' a config-file.
 * found and 'sourced' metadata (if separate).
 
@@ -114,7 +113,6 @@ All subcommands support
 * --origin
 * --update
 * --install
-* --completion
 
 ## Bash Autocompletion
 
@@ -125,20 +123,20 @@ Groan includes built-in dynamic tab completion for Bash.
 To output the completion script for your shell configuration:
 
 ```bash
-eval "$(groan --completion)"
+eval "$(groan ---completion)"
 ```
 
 Or append it to your `~/.bashrc` / `~/.bash_profile`:
 
 ```bash
-groan --completion >> ~/.bashrc
+groan ---completion >> ~/.bashrc
 ```
 
 Running `groan --install` automatically registers alias and autocompletion bindings in `~/.bashrc`.
 
 ### How it Works
 
-When `<TAB>` is pressed, Bash delegates completion to `groan` via an internal `-- ---AUTOCOMPLETE` flag:
+When `<TAB>` is pressed, Bash delegates completion to `groan` via an internal `---AUTOCOMPLETE` hook:
 * Dynamically resolves nested sub-commands and dispatcher suites (e.g. `groan setup <TAB>`).
 * Completes flag options (e.g. `--config=`, `--theme=`, `--debug`).
 * Generates completions for available config names when typing `--config=<TAB>`.

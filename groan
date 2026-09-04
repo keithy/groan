@@ -24,7 +24,7 @@ g_options_common_vertical=\
 --help         | -H | -?  usage help for a command
 --quiet        | -Q       quiet mode
 --verbose      | -V       verbose output
---debug        | -D       users debug (all -GD)
++debug         | +D       users debug (all +GD)
 --dry-run      | -N       refrain from action
 --confirm      | -Y       perform action (not a dry run)
 --config=<cfg> | -C=<cfg> alternative config
@@ -33,8 +33,8 @@ g_options_common_vertical=\
 
 g_options_common_horizontal=\
 "
---help --quiet --verbose --debug
- -H     -Q      -V        -D
+--help --quiet --verbose +debug
+ -H     -Q      -V        +D
 "
 
 ##############################################################
@@ -74,7 +74,7 @@ function g_readConfig () # from conf files
   local commands_folder="${2:-commands}"
 
   c_dir="$s_dir"
-  c_file="$s_file"
+  c_file="${s_sub_cmd:-$s_file}"
   c_path="$s_path"
   [[ "$s_cmd" == "$g_file" ]] && c_cmd="$g_cmd" && s_cmd="$g_cmd" ||  c_cmd="${s_cmd}"
   c_dirname="${s_dir##*/}"
@@ -124,7 +124,9 @@ function g_readConfig () # from conf files
   # Read customization from
   g_find 'Custom0 ' ".${c_file}.conf"   "${c_dir}"                                 && source "$g_found"
   g_find 'Custom1 ' "${c_file}.conf"    "${c_dir}" "${g_config_file_locations[@]}" && source "$g_found"
-  g_find 'Custom2 ' "${c_dirname}.conf" "${g_config_file_locations[@]}"            && source "$g_found"
+  if [[ "$c_dirname" != "$c_file" ]] && [[ "$c_dirname" != "${s_file:-}" ]] && [[ "$c_dirname" != "${s_dest_cmd:-}" ]]; then
+    g_find 'Custom2 ' "${c_dirname}.conf" "${g_config_file_locations[@]}"            && source "$g_found"
+  fi
     
   # Obtain config from...
   if g_find 'Config  ' "${CONFIG:-default}.conf" "${g_config_file_locations[@]}"
@@ -526,7 +528,7 @@ function _g_bashrc_ ()
 
 cat <<RCD
 alias $name='${alias_text}' ##:$name:##
-_ac_$name () { COMPREPLY=( \$(${alias_text} "\${COMP_WORDS[@]:1}" -- ---AUTOCOMPLETE) ); } ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} "\${COMP_WORDS[@]:1}" ---AUTOCOMPLETE) ); } ##:$name:##
 complete -F _ac_$name ${name} ##:$name:##
 RCD
 
@@ -966,9 +968,7 @@ function _g_optionsTopLevelOnly ()
       || p_echo "DRY-RUN --confirm to apply"
   }
 
-  g_options+="--completion ; generate bash autocompletion script\n"
-  function g_option--completion () { g_option---completion "$@"; }
-  function g_option---completion ()
+function g_option---completion ()
   {
     local name="$g_cmd"
     if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
@@ -1035,11 +1035,11 @@ g_declare_options METADATAONLY SHOWHELP CONFIRM DRYRUN=true "THEME=${THEME:-defa
 
 ##############################################################
 # Debug verbosity levels
-# DEBUG  -D  User level Debug (for non-groan code)
-# DDEBUG -DD Developer level "Deep" Debug (for non-groan code)
-# GDEBUG -GD Groan Debug (for groan code)
-# CDEBUG -CD Config Debug (shows all locations searched for config)
-# XDEBUG -XD Bash shell debugging using set -x
+# DEBUG  +D  User level Debug (for non-groan code)
+# DDEBUG +DD Developer level "Deep" Debug (for non-groan code)
+# GDEBUG +GD Groan Debug (for groan code)
+# CDEBUG +CD Config Debug (shows all locations searched for config)
+# XDEBUG +XD Bash shell debugging using set -x
 
 g_declare_options MEDEBUG XDEBUG DDEBUG DEBUG GDEBUG CDEBUG VERBOSE ENVIRONMENT LOUD=true
 
@@ -1065,24 +1065,24 @@ do
       -EXIT=* )
         trap "g_onEXIT__${arg#-EXIT=}" EXIT
       ;;
-      -DD | --ddebug | --deep-debug) 
+      +DD | +ddebug | +deep-debug) 
         DDEBUG=true
       ;;
-      -GD | --groan-debug)
+      +GD | +groan-debug)
         MEDEBUG=true
         GDEBUG=true
         DEBUG=true
         VERBOSE=true
         LOUD=true
       ;;
-      -CD | --config-debug)
+      +CD | +config-debug)
         MEDEBUG=true
         CDEBUG=true
       ;;
-      -XD | --bash-debug)
+      +XD | +bash-debug)
         XDEBUG=true
       ;;
-      -D | --debug)
+      +D | +debug)
         DEBUG=true
         VERBOSE=true
         LOUD=true
@@ -1162,8 +1162,6 @@ function g_handleAutocomplete ()
   for arg in "${args[@]:+${args[@]}}"; do
     if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
       break
-    elif [[ "$arg" == "--" ]]; then
-      continue
     else
       ac_words+=("$arg")
     fi
@@ -1229,86 +1227,101 @@ function g_handleAutocomplete ()
   local cand_list=()
   local dir type path name
 
-  for dir in "${g_subcmd_locations[@]}"; do
-    for type in "${g_types[@]}"; do
-      for path in "$dir"/*.$type.*; do
-        if [[ -f "$path" ]]; then
-          g_parseScriptPath "$path"
-          name=""
-          if [[ "$path" == *.sub.* ]]; then
-            g_parseScriptPathMore "$path"
-            name="${s_sub_cmd:-$s_cmd}"
-          else
-            name="$s_cmd"
+  if ! $navigated_subcmd || $s_isDispatcher; then
+    for dir in "${g_subcmd_locations[@]}"; do
+      for type in "${g_types[@]}"; do
+        for path in "$dir"/*.$type.*; do
+          if [[ -f "$path" ]]; then
+            g_parseScriptPath "$path"
+            name=""
+            if [[ "$path" == *.sub.* ]]; then
+              g_parseScriptPathMore "$path"
+              name="${s_sub_cmd:-$s_cmd}"
+            else
+              name="$s_cmd"
+            fi
+            if [[ -n "$name" ]]; then
+              u_includes cand_list "$name" || cand_list+=("$name")
+            fi
           fi
-          if [[ -n "$name" ]]; then
-            u_includes cand_list "$name" || cand_list+=("$name")
-          fi
-        fi
+        done
       done
     done
-  done
-
-  local common_opts=(
-    "--help"
-    "--quiet"
-    "--verbose"
-    "--debug"
-    "--dry-run"
-    "--confirm"
-    "--config="
-    "--theme="
-    "--ddebug"
-    "--groan-debug"
-    "--config-debug"
-    "--bash-debug"
-  )
-
-  if ! $navigated_subcmd; then
-    common_opts+=(
-      "--version"
-      "--install"
-      "--uninstall"
-      "--update"
-      "--configs"
-      "--origin"
-      "--temp"
-      "--env"
-      "--which"
-      "--list"
-      "--all"
-      "--list-all"
-    )
   fi
 
-  local opts_text="${g_options:-} ${s_opts:-}"
-  local parsed_opts=()
-  local opt
-  for opt in $opts_text; do
-    if [[ "$opt" == --* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
-      opt="${opt%%;*}"
-      opt="${opt%%|*}"
-      opt="${opt//[[:space:]]/}"
-      [[ -n "$opt" ]] && parsed_opts+=("$opt")
-    fi
-  done
+  if [[ "$cur_word" == -* ]]; then
+    local common_opts=(
+      "--help"
+      "--quiet"
+      "--verbose"
+      "--dry-run"
+      "--confirm"
+      "--config="
+      "--theme="
+    )
 
-  local fn opt_name
-  while read -r fn; do
-    fn="${fn##* }"
-    if [[ "$fn" == g_option--* ]]; then
-      opt_name="${fn#g_option}"
-      if [[ "$opt_name" != -* ]]; then
-        parsed_opts+=("$opt_name")
+    if ! $navigated_subcmd; then
+      common_opts+=(
+        "--version"
+        "--install"
+        "--uninstall"
+        "--update"
+        "--configs"
+        "--origin"
+        "--temp"
+        "--env"
+        "--which"
+        "--list"
+        "--all"
+        "--list-all"
+      )
+    fi
+
+    local opts_text="${g_options:-} ${s_opts:-}"
+    local parsed_opts=()
+    local opt
+    for opt in $opts_text; do
+      if [[ "$opt" == --* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
+        opt="${opt%%;*}"
+        opt="${opt%%|*}"
+        opt="${opt//[[:space:]]/}"
+        [[ -n "$opt" ]] && parsed_opts+=("$opt")
       fi
-    fi
-  done < <(declare -F 2>/dev/null || true)
+    done
 
-  for opt in "${common_opts[@]}" "${parsed_opts[@]}"; do
-    if [[ -n "$opt" ]]; then
+    local fn opt_name
+    while read -r fn; do
+      fn="${fn##* }"
+      if [[ "$fn" == g_option--* ]]; then
+        opt_name="${fn#g_option}"
+        if [[ "$opt_name" != -* ]]; then
+          parsed_opts+=("$opt_name")
+        fi
+      fi
+    done < <(declare -F 2>/dev/null || true)
+
+    for opt in "${common_opts[@]}" "${parsed_opts[@]}"; do
+      if [[ -n "$opt" ]]; then
+        u_includes cand_list "$opt" || cand_list+=("$opt")
+      fi
+    done
+  elif [[ "$cur_word" == +* ]]; then
+    local debug_opts=(
+      "+D"
+      "+DD"
+      "+GD"
+      "+CD"
+      "+XD"
+      "+debug"
+      "+ddebug"
+      "+groan-debug"
+      "+config-debug"
+      "+bash-debug"
+    )
+    for opt in "${debug_opts[@]}"; do
       u_includes cand_list "$opt" || cand_list+=("$opt")
-    fi
-  done
+    done
+  fi
 
   compgen -W "$(printf '%s\n' "${cand_list[@]}")" -- "$cur_word"
   exit 0
