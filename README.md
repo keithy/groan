@@ -55,7 +55,7 @@ based projects.
 * Support for additional documentation topics/reporting
 * Demonstrates simple implementation conventions and patterns (e.g. options handling)
 * Adopts the informal [bash "strict" mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/) which considerably aids debugging.
-* (does not yet support command completion.)
+* Supports dynamic Bash autocompletion (via `--completion` or `--install`).
 
 ## Features
 
@@ -114,8 +114,34 @@ All subcommands support
 * --origin
 * --update
 * --install
+* --completion
 
-## Config Files
+## Bash Autocompletion
+
+Groan includes built-in dynamic tab completion for Bash.
+
+### Enabling Autocompletion
+
+To output the completion script for your shell configuration:
+
+```bash
+eval "$(groan --completion)"
+```
+
+Or append it to your `~/.bashrc` / `~/.bash_profile`:
+
+```bash
+groan --completion >> ~/.bashrc
+```
+
+Running `groan --install` automatically registers alias and autocompletion bindings in `~/.bashrc`.
+
+### How it Works
+
+When `<TAB>` is pressed, Bash delegates completion to `groan` via an internal `-- ---AUTOCOMPLETE` flag:
+* Dynamically resolves nested sub-commands and dispatcher suites (e.g. `groan setup <TAB>`).
+* Completes flag options (e.g. `--config=`, `--theme=`, `--debug`).
+* Generates completions for available config names when typing `--config=<TAB>`.
 
 Groan looks for config files in a number of places. The set of
 locations is set in the `<exe>.conf` file (or by overriding
