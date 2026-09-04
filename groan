@@ -685,7 +685,6 @@ function g_nextDispatch ()
   if g_shiftInto_g_next; then
     g_dispatch "$g_next"
   else
-    [[ "${s_path}" == "${g_path}" ]] && g_optionsTopLevelOnly
     g_actions
   fi
 }
@@ -928,81 +927,14 @@ function g_listAllSubCmds ()
   done
 }
 
-function _g_optionsTopLevelOnly ()
-{
-  g_options+=" ; \n"
-  g_options+="--version ; git version\n"
-
-  function g_option--version ()
-  {
-    printf "$g_home "
-    bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" describe --long --tags --dirty --always 2> /dev/null
-  }
-
-  g_options+="--install | --uninstall ; install as bash alias\n"
-  g_options+="--install=<name> ; install as bash alias <name>\n"
-  g_options+="--install=<name> --config=<alt> ; install with config <alt>\n"
-
-  function g_option--install ()
-  {
-    local name="$g_cmd"
-    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
-      name="$1"
-    fi
-    g_bashrc_install "${name}" "$HOME/.bashrc" \
-      "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
-
-    $CONFIRM \
-      && p_echo "To use the installed feature - start a new bash" \
-      || p_echo "DRY-RUN --confirm to apply"   
-  }
-
-  function g_option--uninstall ()
-  {
-    local name="$g_cmd"
-    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
-      name="$1"
-    fi
-    $CONFIRM \
-      && u_deleteLines "$HOME/.bashrc" "##:${name}:##" \
-      || p_echo "DRY-RUN --confirm to apply"
-  }
-
+<<<<<<< HEAD
 function g_option---completion ()
-  {
-    local name="$g_cmd"
-    if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
-      name="$1"
-    fi
-    _g_bashrc_ "${name}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
-  }
-
-  s_usage+="$breadcrumbs ; list commands\n"
-  s_usage+="$breadcrumbs --install ; install as bash alias\n"
-  s_usage+="$breadcrumbs --install=tool -C=tool ; install as bash alias with config\n"
-
-  g_options+="--update ; git pull latest\n"
-
-  function g_option--update ()
-  {
-    $CONFIRM \
-      && git --git-dir="$g_dir/.git" --work-tree="$g_dir" pull \
-      || p_echo "DRY-RUN --confirm to apply"
-  }
-  
-  g_options+="--configs ; list available config files\n"
-  function g_option--configs ()
-  {
-    for each in $(find "${@:-${g_config_file_locations[@]}}" -name "*.conf" 2> /dev/null)
-    do
-      echo "${each##*/}"
-    done
-  }
-}
-
-function g_optionsTopLevelOnly ()
 {
-  _g_optionsTopLevelOnly
+  local name="$g_cmd"
+  if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
+    name="$1"
+  fi
+  _g_bashrc_ "${name}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
 }
 
 function g_actions ()
@@ -1128,20 +1060,6 @@ done
 ##############################################################
 # PLUGINS
 
-g_options+="--origin ; git repo\n"
-function g_option--origin ()
-{
-  printf "$g_home "
-  bold git  --git-dir="$g_dir/.git" --work-tree="$g_dir" remote get-url origin 2> /dev/null
-}
-
-g_options+="--temp ; the temp directory\n"
-function g_option--temp  () { echo "$g_tmp"  ; }
-g_options+="--env ; the environment (filtered: no functions)\n"
-function g_option--env  () { env -0 | grep -zv '^[A-Za-z_][A-Za-z0-9_]*\(\)' | tr '\0' '\n' | sort ; }
-
-g_options+="--which ; path of the executable\n"
-function g_option--which () { echo "$g_path" ; }
 g_options+="--list ; list sub-commands\n"
 function g_option--list () { g_listCmds ; }
 
@@ -1247,6 +1165,32 @@ function g_handleAutocomplete ()
         done
       done
     done
+<<<<<<< HEAD
+=======
+  done
+
+  local common_opts=(
+    "--help" "-H"
+    "--quiet" "-Q"
+    "--verbose" "-V"
+    "--debug" "-D"
+    "--dry-run" "-N"
+    "--confirm" "-Y"
+    "--config=" "-C="
+    "--theme="
+    "--ddebug" "-DD"
+    "--groan-debug" "-GD"
+    "--config-debug" "-CD"
+    "--bash-debug" "-XD"
+  )
+
+  if ! $navigated_subcmd; then
+    common_opts+=(
+      "--list"
+      "--all"
+      "--list-all"
+    )
+>>>>>>> 4ac3990 (refactor: rename setup-utility to setup-tool and outsource setup options)
   fi
 
   if [[ "$cur_word" == -* ]]; then
