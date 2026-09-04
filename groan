@@ -1249,18 +1249,18 @@ function g_handleAutocomplete ()
   done
 
   local common_opts=(
-    "--help" "-H"
-    "--quiet" "-Q"
-    "--verbose" "-V"
-    "--debug" "-D"
-    "--dry-run" "-N"
-    "--confirm" "-Y"
-    "--config=" "-C="
+    "--help"
+    "--quiet"
+    "--verbose"
+    "--debug"
+    "--dry-run"
+    "--confirm"
+    "--config="
     "--theme="
-    "--ddebug" "-DD"
-    "--groan-debug" "-GD"
-    "--config-debug" "-CD"
-    "--bash-debug" "-XD"
+    "--ddebug"
+    "--groan-debug"
+    "--config-debug"
+    "--bash-debug"
   )
 
   if ! $navigated_subcmd; then
@@ -1285,7 +1285,7 @@ function g_handleAutocomplete ()
   local parsed_opts=()
   local opt
   for opt in $opts_text; do
-    if [[ "$opt" == -* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
+    if [[ "$opt" == --* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
       opt="${opt%%;*}"
       opt="${opt%%|*}"
       opt="${opt//[[:space:]]/}"
