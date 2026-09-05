@@ -274,7 +274,45 @@ function u_needsSudo() {
 
 function u_deleteLines 	# in-place one liner
 {
-	sed -i "/${2}/,/${3:-$2}/d" "$1"
+  if [[ -n "${3:-}" ]]; then
+    sed -i "/${2}/,/${3}/d" "$1"
+  else
+    sed -i "/${2}/d" "$1"
+  fi
+}
+
+function u_updateConfigFile ()
+{
+  local dest="$1" ; shift
+  local wip="${g_tmp}/${dest////-}"
+  
+  touch "$dest"
+  cp "$dest" "$wip" || true
+
+  $GDEBUG && p_echo "Before:" && cat "$wip"
+
+  local tags=()
+  while [[ $# -gt 0 && "$1" != "--" ]]; do
+    tags+=("$1")
+    shift
+  done
+  [[ "${1:-}" == "--" ]] && shift
+
+  for tag in "${tags[@]}"; do
+    u_deleteLines "$wip" "$tag"
+  done
+
+  $GDEBUG && p_echo "Cleaned:" && cat "$wip" && echo
+
+  if [[ $# -gt 0 ]]; then
+    printf "%s\n" "$*" >> "$wip"
+  else
+    cat >> "$wip"
+  fi
+
+  $VERBOSE && p_echo "${dim}updating ${dest}${reset}" && cat "$wip" || true
+  $CONFIRM && cp "$wip" "$dest"
+  :
 }
 
 ##############################################################
@@ -526,40 +564,22 @@ function g_declare_options ()
   done
 }
 
-function _g_bashrc_ ()
+function _g_bashrc_completion_ ()
 {
   local name="$1" alias_text="$2"
-
 cat <<RCD
-alias $name='${alias_text}' ##:$name:##
-_ac_$name () { COMPREPLY=( \$(${alias_text} "\${COMP_WORDS[@]:1}" ---AUTOCOMPLETE) ); } ##:$name:##
-complete -F _ac_$name ${name} ##:$name:##
+_ac_$name () { COMPREPLY=( \$(${alias_text} "\${COMP_WORDS[@]:1}" ---AUTOCOMPLETE) ); } ##:_ac_$name:##
+complete -F _ac_$name ${name} ##:_ac_$name:##
 RCD
-
 }
 
-function g_bashrc_install ()
+function g_option---completion ()
 {
-  #2) dest file - "$HOME/.bashrc"
-  local name="$1" dest="$2" alias_text="$3" wip="${g_tmp}/${2////-}"
-  
-  # backup
-	touch "$dest" 
-	cp "$dest" "$wip" || true
-
-	$GDEBUG && p_echo "Before:" && cat "$wip"
-
-	u_deleteLines "$wip" "##:$name:##"
-
-	$GDEBUG && p_echo "Cleaned:" && cat "$wip" && echo
-
-  # append
-	touch "$wip"
-	_g_bashrc_ "$name" "$alias_text" >> "$wip"
-
-  $VERBOSE && p_echo "${dim}updating ${dest}${reset}" && cat "$wip" || true
-	$CONFIRM && cp "$wip" "$dest"
-  :
+  local name="$g_cmd"
+  if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
+    name="$1"
+  fi
+  _g_bashrc_completion_ "${name}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
 }
 
 ##############################################################
@@ -932,15 +952,6 @@ function g_listAllSubCmds ()
   done
 }
 
-function g_option---completion ()
-{
-  local name="$g_cmd"
-  if [[ -n "${1:-}" ]] && [[ "${1:0:1}" != "-" ]]; then
-    name="$1"
-  fi
-  _g_bashrc_ "${name}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
-}
-
 function g_actions ()
 {
   $METADATAONLY && return 0
@@ -1267,6 +1278,7 @@ g_nextDispatch
 $SHOWHELP && g_displayHelp 
 :
 
-# "This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php 
-# Any additional contribution submitted for incorporation into or for distribution with this file shall be presumed
-# subject to the same license."
+#"This Code is distributed subject to the MIT License, as in
+# http://www.opensource.org/licenses/mit-license.php .
+# Additional sub-commands created by users may be licensed
+# under their own terms."

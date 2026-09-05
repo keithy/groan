@@ -5,21 +5,24 @@
 #
 me "$BASH_SOURCE" #tradition
 command="new"
-s_description="create a new project/file structure from a template"
+s_description="create a new project/file structure from a template
+
+Copies a template directory structure into a target path using rsync.
+
+Destructive/write operations default to dry-run mode; pass --confirm (-Y) to execute."
+
 s_opts=\
-"--options|--list    # list available templates
---confirm            # not a dry run - perform action
---template=<choice>  # selection (-t=<choice>)
---<choice>           # selection (like cargo)
---go-ahead           # allow copy into existing project"
- 
+"
+--list | --options   list available template presets ;
+--template=<tmpl>    select template by name ; (-t=<tmpl>)
+--go-ahead           allow populating an existing directory ;
+"
+
 s_usage=\
-"$breadcrumbs                               # --list & --help
-$breadcrumbs --<template>                  # show template contents
-$breadcrumbs my-project --starter          # new project using 'starter' template
-$breadcrumbs my-project --t=starter        # new project using 'starter' template
-$breadcrumbs --list                        # list available templates
-$breadcrumbs --help                        # this message"
+"$breadcrumbs --list                   ; list available project templates
+$breadcrumbs my-project --starter     ; create project using 'starter' template
+$breadcrumbs my-project -t=starter   ; create project using 'starter' template
+$breadcrumbs --starter                 ; inspect files in 'starter' template"
 
 # --options
 [[ -z ${g_config_preset_locations+x} ]] && g_config_preset_locations=("${c_dir:-}")
@@ -77,10 +80,8 @@ $LIST_TEMPLATES && printf "$extra\n\n" && exit 0
 
 [[ -z "$TEMPLATE" ]] && g_displayHelp && exit 0
 
-
-
 templatePath="$TEMPLATE"
-# auto-append .conf extension
+# auto-append .tmpl extension if not present
 [ "${templatePath##*.}" != "tmpl" ] && templatePath="${templatePath}.tmpl"
 
 # search for template dir
@@ -91,7 +92,7 @@ if [[ ! -d "$templatePath" ]]; then
 	done
 fi
 
-# exit if file does not exist
+# exit if template directory does not exist
 [[ ! -d "$templatePath" ]] && echo "$TEMPLATE not found" && exit 1
 
 # show if the template exists and install is not requested
@@ -108,11 +109,17 @@ r_s_opts=""
 $VERBOSE && r_s_opts="v"
 
 $LOUD && echo "${bold}Creating new project using:${reset} $TEMPLATE"
-$LOUD && echo "rsync -rLtO${r_options}" "$templatePath" "$targetPath"
+$LOUD && echo "rsync -rLtO${r_s_opts}" "$templatePath/" "$targetPath"
 $DRYRUN && echo "${dim}dryrun:  --confirm required to proceed${reset}"
 
-$CONFIRM && rsync "-rLtO${r_options}"  "$templatePath/" "$targetPath"
-$CONFIRM && echo "Created $targetPath"
+if $CONFIRM; then
+    rsync "-rLtO${r_s_opts}" "$templatePath/" "$targetPath"
+    echo "Created $targetPath"
+fi
 
-#"This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 
-#Any additional contribution submitted for incorporation into or for distribution with this file shall be presumed subject to the same license."
+exit 0
+
+#"This Code is distributed subject to the MIT License, as in
+# http://www.opensource.org/licenses/mit-license.php .
+# Additional sub-commands created by users may be licensed
+# under their own terms."

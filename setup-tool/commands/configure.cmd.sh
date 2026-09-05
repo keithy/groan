@@ -7,17 +7,17 @@ me "$BASH_SOURCE" #tradition
 command="configure" ; s_description="select or edit configuration file"
 s_opts=\
 "
---options        list options and presets
---show           show current config file
+--show           display active or requested configuration file ;
+--edit           open configuration file in \$EDITOR ;
+--options        list configuration file locations and presets ;
+--install=<loc>  install preset configuration at target location ;
 "
-s_usage="
-$breadcrumbs ;                                 # show current config file\n
-$breadcrumbs --show ;                          # show current config file\n
-$breadcrumbs --edit ;                          # edit current config file\n
-$breadcrumbs --options ;                       # list available location options\n
-$breadcrumbs --install=<option> <file.conf> ;  # install file at given location (local/user/global)\n
-$breadcrumbs --help ;                          # this message\n
-"
+s_usage=\
+"$breadcrumbs                         ; display active configuration file
+$breadcrumbs --show                  ; display active configuration file
+$breadcrumbs --edit                  ; edit active configuration file
+$breadcrumbs --options               ; list available locations and presets
+$breadcrumbs --install=<loc> <file>  ; install preset config file at location"
 
 $METADATAONLY && return
 
@@ -27,7 +27,14 @@ g_declare_options SHOWCONFIG EDITCONFIG SHOWOPTIONS INSTALL GETFILE
 
 configure_name="${CONFIG:-}"
 config_option=""
-SHOWCONFIG=true
+SHOWCONFIG=false
+EDITCONFIG=false
+SHOWOPTIONS=false
+INSTALL=false
+
+if [[ $# -eq 0 ]]; then
+    SHOWCONFIG=true
+fi
 
 for arg in "$@"
 do
@@ -40,7 +47,7 @@ do
             SHOWCONFIG=false
         ;;
         --options)
-            SHOWs_opts=true
+            SHOWOPTIONS=true
             SHOWCONFIG=false
         ;;
         --install=*)
@@ -54,11 +61,15 @@ do
         # ? in this context is a single letter wildcard 
         ?*) 
             configure_name="$arg"
+            if ! $EDITCONFIG && ! $SHOWOPTIONS && ! $INSTALL; then
+                SHOWCONFIG=true
+            fi
         ;;
     esac
 done
  
 g_preset_match="${g_preset_match:-*.conf.sh}"
+g_config_options=("${g_config_options[@]:-${g_config_file_options[@]:-global context user}}")
 
 function p_path ()
 {
@@ -98,8 +109,11 @@ function p_location ()
     (( idx = $1 + 1 ))
 
     case "$option" in
-        local)
-            path="(pwd)"
+        context)
+            path="${path/${g_dir}/($g_file)}"
+        ;;
+        user)
+            path="${path/$HOME/\$HOME}"
         ;;
         *)
             path="${path/${g_dir}/($g_file)}"
@@ -266,5 +280,7 @@ fi
 
 exit 0
 
-#"This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 
-#Any additional contribution submitted for incorporation into or for distribution with this file shall be presumed subject to the same license."
+#"This Code is distributed subject to the MIT License, as in
+# http://www.opensource.org/licenses/mit-license.php .
+# Additional sub-commands created by users may be licensed
+# under their own terms."

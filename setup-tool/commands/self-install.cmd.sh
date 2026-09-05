@@ -6,17 +6,55 @@
 me "$BASH_SOURCE" #tradition
 
 command="self-install"
-s_description="install alias, autocompletion, or symlink in system"
-s_usage="usage:
-$breadcrumbs --alias [name]
-$breadcrumbs --unalias [name]
-$breadcrumbs --completion [name]
-$breadcrumbs /usr/local/bin --link
-$breadcrumbs --unlink"
+s_description="install alias, autocompletion, or symlink in system
+
+Configures system-wide or user-level integrations for ${g_cmd:-tool}.
+
+Provides options to:
+  • Create or remove shell aliases/functions in ~/.bash_profile
+  • Generate Bash tab-completion definitions for interactive shells
+  • Symlink the binary into system PATH (e.g., /usr/local/bin) or remove it
+
+Destructive/write operations default to dry-run mode; pass --confirm (-Y) to execute."
+
+s_opts=\
+"
+--alias[=<name>]     install shell alias/helper function in ~/.bash_profile ; (default name: ${g_cmd:-tool})
+--unalias[=<name>]   remove installed shell alias/helper from ~/.bash_profile ; (or --uninstall)
+--completion[=<name>] generate autocompletion snippet (or install with --confirm) ;
+--link [path]        create symbolic link in system PATH ; (default: /usr/local/bin)
+--unlink             remove installed symbolic link from system PATH ;
+"
+
+s_usage=\
+"$breadcrumbs --alias [name] --confirm          ; install alias into ~/.bash_profile
+$breadcrumbs --unalias [name] --confirm        ; remove alias from ~/.bash_profile
+$breadcrumbs --completion [name]               ; print completion snippet (for eval)
+$breadcrumbs --completion [name] --confirm     ; install completion into ~/.bash_profile
+$breadcrumbs [/usr/local/bin] --link --confirm ; create symlink in target PATH directory
+$breadcrumbs --unlink --confirm                ; remove installed symlink from PATH"
 
 $METADATAONLY && return
 
 $GDEBUG && echo "Command: '$command'"
+
+function _g_bashrc_alias_ ()
+{
+  local name="$1" alias_text="$2"
+  echo "alias $name='${alias_text}' ##:$name:##"
+}
+
+function g_bashrc_install_alias ()
+{
+  local name="$1" dest="$2" alias_text="$3"
+  _g_bashrc_alias_ "$name" "$alias_text" | u_updateConfigFile "$dest" "##:${name}:##"
+}
+
+function g_bashrc_install_completion ()
+{
+  local name="$1" dest="$2" alias_text="$3"
+  _g_bashrc_completion_ "$name" "$alias_text" | u_updateConfigFile "$dest" "##:_ac_${name}:##"
+}
 
 ADDALIAS=false
 UNALIAS=false
@@ -67,24 +105,32 @@ do
 done
 
 if $COMPLETION; then
-    _g_bashrc_ "${aliasName}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
+    if $CONFIRM; then
+        _g_bashrc_completion_ "${aliasName}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
+        g_bashrc_install_completion "${aliasName}" "$HOME/.bash_profile" \
+          "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
+        p_echo "To use the completion feature - start a new bash"
+    else
+        _g_bashrc_completion_ "${aliasName}" "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
+        p_echo "# DRY-RUN --confirm to apply (to ~/.bash_profile)"
+    fi
     exit 0
 fi
 
 if $ADDALIAS; then
-    g_bashrc_install "${aliasName}" "$HOME/.bashrc" \
+    g_bashrc_install_alias "${aliasName}" "$HOME/.bash_profile" \
       "${g_path/$HOME/\$HOME}${CONFIG+ --config=}${CONFIG:-}"
 
     $CONFIRM \
       && p_echo "To use the installed feature - start a new bash" \
-      || p_echo "DRY-RUN --confirm to apply"
+      || p_echo "DRY-RUN --confirm to apply (to ~/.bash_profile)"
     exit 0
 fi
 
 if $UNALIAS; then
     $CONFIRM \
-      && u_deleteLines "$HOME/.bashrc" "##:${aliasName}:##" \
-      || p_echo "DRY-RUN --confirm to apply"
+      && u_deleteLines "$HOME/.bash_profile" "##:${aliasName}:##" \
+      || p_echo "DRY-RUN --confirm to apply (to ~/.bash_profile)"
     exit 0
 fi
 
@@ -137,5 +183,5 @@ if $ADDLINK; then
     exit 0
 fi
 
-echo "No action specified (--alias, --unalias, --completion, --link, --unlink)"
-exit 1
+g_displayHelp
+exit 0

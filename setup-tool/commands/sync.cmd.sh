@@ -4,51 +4,55 @@
 #
 me "$BASH_SOURCE" #tradition
 
-command="$s_sub_cmd"
-brief="update code files that should be identical
-The framework has many code files that should be identical: 
-- find those files based on a signature text snippet
-- highlight latest vs out of date code
-- --update brings all files up to date
-"
+command="sync"
+s_description="synchronize identical framework copies across project fixtures
+
+Scans the repository for duplicate framework files (identified by code signatures)
+and checks whether copies are up to date or modified relative to the latest file.
+
+Supports updating older files via copy or consolidating copies into hardlinks."
+
 s_opts=\
 "
---groans              # show all groan code (default)
---update [--confirm]  # update older files to latest code
+--scan               inspect status of core framework signatures ;
+--update             copy newest code version over older copies ; (requires --confirm)
+--hardlink           hardlink all duplicate copies to the latest file ; (requires --confirm)
 "
 
 s_usage=\
-"$breadcrumbs --groans        # show all check endpoints"
+"$breadcrumbs --scan               ; inspect status of framework copies
+$breadcrumbs --update --confirm   ; copy latest files over out-of-date copies
+$breadcrumbs --hardlink --confirm ; hardlink duplicate copies to the latest file"
 
 $METADATAONLY && return
+
+[[ $# -eq 0 ]] && g_displayHelp && exit 0
  
 # Options processing pattern - search through the arguments for the command and flags
 declare -A signature
 
 #The signatures below must have ^ otherwise this file will be a false positive
-signature['Main executable']="^function g_readCustom"
+signature['Main executable']="^function g_readConfig "
 signature['Dispatcher']="^# This g_dispatcher"
-signature['List commands']="^# groan single command list"
-signature['Test all suites runner']="^# groan test.sub.sh"
 signature['Subcommand alias']="^# Subcommand Alias"
-signature['Test suite runner']="^# Script for running"
 signature['bash-spec']="^## BDD-style testing framework"
-signature['version.sub.sh']="^# groan version.sub.sh"
-signature['api.sub.sh']="^s_description=\"\$app raw api calls\""
 signature['utils.sh']="^function json_pretty_print"
 
 SHOW_GROANS=true
-SHOW_LATEST=false
-SHOW_FILES=false
 UPDATE=false
+HARDLINK=false
 
 for arg in "$@"
 do
     case "$arg" in
-      --gr*|-g*)
+      --scan | --groans | -g*)
             SHOW_GROANS=true
       ;;
       --update)
+            UPDATE=true
+      ;;
+      --hardlink | --hardlinks | -l)
+            HARDLINK=true
             UPDATE=true
       ;;
       --all|--a*|-a)
@@ -60,6 +64,10 @@ do
     esac
 done
 
+if $CONFIRM; then
+    UPDATE=true
+fi
+
 if $SHOW_GROANS; then 
       $LOUD && echo "${bold}Key:${reset} up to date,${dim}older${reset},${underline}${dim}needs update${reset}"
 fi
@@ -67,14 +75,22 @@ fi
 loc=0
 all_up_to_date=true
 for name in "${!signature[@]}"; do
-      $LOUD && echo "${bold}${name}${reset}: /${signature[$name]}/"
-
+      files=()
       latest=""
       for file in $(grep -rl "${signature[$name]}" "${g_dir}"); do
-            [[ "$file" -nt "$latest" ]] && latest="$file"
+            files+=("$file")
+            [[ -z "$latest" || "$file" -nt "$latest" ]] && latest="$file"
       done
 
-      for file in $(grep -rl "${signature[$name]}" "${g_dir}"); do
+      count=${#files[@]}
+      [[ $count -eq 1 ]] && copy_str="copy" || copy_str="copies"
+      $LOUD && echo "${bold}${name}${reset} (${count} ${copy_str} found): /${signature[$name]}/"
+
+      [[ $count -eq 0 ]] && continue
+
+      read -r latest_ino _ <<< $(ls -ldi "$latest" 2>/dev/null || echo "0")
+
+      for file in "${files[@]}"; do
             
             if [[ "$latest" == "$file" ]]; then
                    line_count=$(wc -l < "$latest" || echo 0 )
@@ -84,15 +100,39 @@ for name in "${!signature[@]}"; do
             [[ $latest -nt $file ]] && older=true || older=false
             diff $latest $file > /dev/null && different=false || different=true
 
+            read -r ino mode nlink _ <<< $(ls -ldi "$file" 2>/dev/null || echo "0 - 1")
+            is_same_inode=false
+            [[ "$ino" == "$latest_ino" && "$ino" != "0" ]] && is_same_inode=true
+
             if $SHOW_GROANS; then      
                   $older && style=$dim || style=$reset
                   $different && style="$underline$dim" || style="$reset"
                   echo "${style}$file${reset}"      
+                  if $different && $is_same_inode; then
+                        echo "  ${bold}Warning:${reset} $file is hardlinked to $latest ($nlink links). Edits directly modify shared inode."
+                  elif $different && [[ "${nlink:-1}" -gt 1 ]]; then
+                        echo "  ${bold}Warning:${reset} $file is hardlinked ($nlink links). Copying with cp will affect all linked files or break hardlinks."
+                  fi
             fi
 
-            $different && all_up_to_date=false
-            $older && $different && $UPDATE && $LOUD && echo cp "$latest" "$file"
-            $older && $different && $UPDATE && $CONFIRM &&   cp "$latest" "$file"
+            if $HARDLINK; then
+                  if ! $is_same_inode; then
+                        all_up_to_date=false
+                        $LOUD && echo ln -f "$latest" "$file"
+                        $CONFIRM && ln -f "$latest" "$file"
+                  fi
+            elif $UPDATE; then
+                  if $different; then
+                        all_up_to_date=false
+                        if $older; then
+                              if [[ "${nlink:-1}" -gt 1 ]]; then
+                                    echo "  ${bold}Warning:${reset} $file is hardlinked ($nlink links). 'cp' will modify shared inode or break hardlinks."
+                              fi
+                              $LOUD && echo cp "$latest" "$file"
+                              $CONFIRM && cp "$latest" "$file"
+                        fi
+                  fi
+            fi
       done     
 done
 

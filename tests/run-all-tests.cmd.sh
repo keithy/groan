@@ -181,5 +181,8 @@ fi
 
 exit 0
 
-#"This Code is distributed subject to the MIT License, as in http://www.opensource.org/licenses/mit-license.php . 
+#"This Code is distributed subject to the MIT License, as in
+# http://www.opensource.org/licenses/mit-license.php .
+# Additional sub-commands created by users may be licensed
+# under their own terms."
 

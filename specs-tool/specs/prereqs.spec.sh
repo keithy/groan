@@ -62,6 +62,23 @@ describe "specs-tool prereqs" && {
   it "the bash-spec runner is reachable from specs-tool's lib" && {
     [[ -f "$bash_spec" ]]
   }
+
+  it "starting non-interactive bash sourcing .bashrc/.bash_profile produces no output" && {
+    tmp_home="$(mktemp -d /tmp/groan-spec-home-XXXXXX)"
+    tmp_rc="${tmp_home}/.bashrc"
+    tmp_prof="${tmp_home}/.bash_profile"
+
+    HOME="$tmp_home" "$groan" setup self-install --alias mygroan --confirm >/dev/null 2>&1
+    HOME="$tmp_home" "$groan" setup self-install --completion mygroan --confirm >/dev/null 2>&1
+
+    out_rc="$(HOME="$tmp_home" bash --rcfile "$tmp_rc" -c "echo STDIN_CHECK" 2>&1)"
+    out_prof="$(HOME="$tmp_home" bash --rcfile "$tmp_prof" -c "echo STDIN_CHECK" 2>&1)"
+
+    rm -rf "$tmp_home"
+
+    expect "$out_rc" to_be "STDIN_CHECK"
+    expect "$out_prof" to_be "STDIN_CHECK"
+  }
 }
 
 describe "specs-tool end-to-end" && {
