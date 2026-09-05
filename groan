@@ -870,7 +870,9 @@ function p_cols ()
           sub(/[ \t]+$/, "", c1)
           c2 = substr(lines[i], idx + 1)
           sub(/^[ \t]+/, "", c2)
-          printf "%-*s    %s\n", max, c1, c2
+          pad = ""
+          for (j = length(c1); j < max; j++) pad = pad " "
+          print c1 pad "    " c2
         } else {
           print lines[i]
         }
