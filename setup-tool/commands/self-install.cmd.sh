@@ -85,8 +85,11 @@ do
             aliasName="${arg#--completion=}"
         fi
     ;;
-    --link)
+    --link | --link=*)
         ADDLINK=true
+        if [[ "$arg" == --link=* ]]; then
+            installPath="${arg#--link=}"
+        fi
     ;;
     --unlink)
         UNLINK=true
@@ -96,6 +99,8 @@ do
     ;;
     *)
         if $ADDLINK; then
+            installPath="$arg"
+        elif [[ -d "$arg" ]]; then
             installPath="$arg"
         else
             aliasName="$arg"
@@ -147,14 +152,24 @@ if $UNLINK; then
     fi
 
     theInstalled="$(readlink -n "$theInstalledLink" || true)"
-    if [ "$theInstalled" != "$c_file" ]; then
+    theInstalledTarget="$theInstalled"
+    if [[ "$theInstalled" != /* ]]; then
+        theInstalledTarget="$(cd -- "$(dirname -- "$theInstalledLink")" 2>/dev/null && cd -- "$(dirname -- "$theInstalled")" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$(basename -- "$theInstalled")")"
+    fi
+    if [[ "$theInstalled" != "$g_path" && "$theInstalled" != "$c_file" && "$theInstalledTarget" != "$g_path" ]]; then
         echo "This link does not point to me: $theInstalledLink - leaving well alone"
         exit 1
     fi
 
     $LOUD && echo "rm $theInstalledLink"
     $DRYRUN && echo "dryrun:  --confirm required to proceed"
-    $CONFIRM && rm "$theInstalledLink" && echo "Removed installed symbolic link $theInstalledLink" || echo "failed"
+    if $CONFIRM; then
+        if rm "$theInstalledLink"; then
+            echo "Removed installed symbolic link $theInstalledLink"
+        else
+            echo "failed"
+        fi
+    fi
 
     exit 0
 fi
@@ -176,10 +191,15 @@ if $ADDLINK; then
         exit 1
     fi
 
-    $LOUD && echo "ln -s ${g_file} $installPath/${g_file}"
+    $LOUD && echo "ln -s ${g_path} $installPath/${g_file}"
     $DRYRUN && echo "dryrun: --confirm required to proceed"
-    $CONFIRM && ln -s "${g_file}" "$installPath/${g_file}" 
-    $CONFIRM && echo "Installed symbolic link from $installPath/${g_file} to ${g_file}"
+    if $CONFIRM; then
+        if ln -s "${g_path}" "$installPath/${g_file}"; then
+            echo "Installed symbolic link from $installPath/${g_file} to ${g_path}"
+        else
+            echo "failed"
+        fi
+    fi
     exit 0
 fi
 

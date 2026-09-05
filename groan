@@ -394,11 +394,12 @@ function _g_executeScriptPath ()
             $LOUD && p_echo "Refused: $s_path resolves outside sub-command locations"
             return 1
         fi
-        $GDEBUG && p_echo "$status eval> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
+        $GDEBUG && p_echo "$status run> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
         $XDEBUG && set -x
-        eval "$s_path" "${args[@]:+${args[@]}}"
+        local exit_code=0
+        "$s_path" "${args[@]:+${args[@]}}" || exit_code=$?
         $XDEBUG && set +x
-        exit 0
+        exit $exit_code
     ;;
   esac
   return 0 # needed due to use of &&
@@ -465,12 +466,13 @@ function p_description ()
 
 function p_first_line ()
 {
-    local line
-    for line in $(printf "$1")
-    do
-      printf "$line"
+  local line
+  while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+      printf '%s' "$line"
       return 0
-    done
+    fi
+  done <<< "$1"
 }
 
 function p_command_list_description ()

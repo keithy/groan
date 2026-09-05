@@ -23,7 +23,7 @@ ${METADATAONLY:-false} && return
 # Locate specs-tool's lib relative to this script. The script lives at
 # specs-tool/specs/prereqs.spec.sh; lib is ../lib/bash-spec-2.sh.
 this="${BASH_SOURCE[0]}"
-here="${this%/*}"
+here="$(cd -- "${this%/*}" 2>/dev/null && pwd -P)"
 
 # Source specs-tool's vendored helper. Unlike other suites, this one
 # runs INSIDE specs-tool itself, so we can hardcode the lib path
@@ -32,14 +32,13 @@ source "${here}/../lib/bash-spec-2.sh"
 rerun_in_clean_bash
 source "$bash_spec"
 
-# Find the production groan framework.
-groan="/Users/keith/code/groan-a-lot/groan/groan"
-[[ -x "$groan" ]] || skip "production groan/groan not found at $groan"
-repo_root="/Users/keith/code/groan-a-lot"
-
 # specs-tool's path (the sub-suite directory).
 specs_tool_dir="${here%/*}"
 groan_root_repo="${specs_tool_dir%/*}"
+
+# Find the production groan framework.
+groan="${groan_root_repo}/groan"
+[[ -x "$groan" ]] || { echo "production groan not found at $groan" >&2; exit 1; }
 
 describe "specs-tool prereqs" && {
 
@@ -84,7 +83,7 @@ describe "specs-tool prereqs" && {
 describe "specs-tool end-to-end" && {
 
   it "./groan specs prints usage under the dispatcher's crumb" && {
-    capture out <( cd "$repo_root" && ./groan/groan --theme=off specs 2>&1 )
+    capture out <( cd "$groan_root_repo" && "$groan" --theme=off specs 2>&1 )
     expect_array out to_contain 'commands:'
     expect_array out to_contain 'groan specs                    spec/test runner for installed tools (this list)'
     expect_array out to_contain 'groan specs list               list tools with spec/test suites'
@@ -92,14 +91,14 @@ describe "specs-tool end-to-end" && {
   }
 
   it "./groan specs --help prints the help block" && {
-    capture out <( cd "$repo_root" && ./groan/groan --theme=off specs --help 2>&1 )
+    capture out <( cd "$groan_root_repo" && "$groan" --theme=off specs --help 2>&1 )
     expect_array out to_contain 'spec/test runner for installed tools'
     expect_array out to_contain 'options: '
     expect_array out to_contain '--all | --list-all    list all sub-commands'
   }
 
   it "./groan specs list discovers specs-tool's own suite" && {
-    capture out <( cd "$repo_root" && ./groan/groan --theme=off specs list 2>&1 )
+    capture out <( cd "$groan_root_repo" && "$groan" --theme=off specs list 2>&1 )
     expect_array out to_contain '  specs-tool           specs/ (1 file)'
   }
 

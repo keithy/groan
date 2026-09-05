@@ -14,13 +14,13 @@ Supports updating older files via copy or consolidating copies into hardlinks."
 
 s_opts=\
 "
---scan               inspect status of core framework signatures ;
---update             copy newest code version over older copies ; (requires --confirm)
---hardlink           hardlink all duplicate copies to the latest file ; (requires --confirm)
+--scan [dir]         inspect status of core framework signatures ;
+--update [dir]       copy newest code version over older copies ; (requires --confirm)
+--hardlink [dir]     hardlink all duplicate copies to the latest file ; (requires --confirm)
 "
 
 s_usage=\
-"$breadcrumbs --scan               ; inspect status of framework copies
+"$breadcrumbs --scan [dir]         ; inspect status of framework copies
 $breadcrumbs --update --confirm   ; copy latest files over out-of-date copies
 $breadcrumbs --hardlink --confirm ; hardlink duplicate copies to the latest file"
 
@@ -33,14 +33,14 @@ declare -A signature
 
 #The signatures below must have ^ otherwise this file will be a false positive
 signature['Main executable']="^function g_readConfig "
-signature['Dispatcher']="^# This g_dispatcher"
-signature['Subcommand alias']="^# Subcommand Alias"
+signature['Dispatcher']="^# Dispatcher alias"
+signature['Subcommand alias']="^# Subcommand [Aa]lias"
 signature['bash-spec']="^## BDD-style testing framework"
-signature['utils.sh']="^function json_pretty_print"
 
 SHOW_GROANS=true
 UPDATE=false
 HARDLINK=false
+scan_dir="${g_dir}"
 
 for arg in "$@"
 do
@@ -58,8 +58,13 @@ do
       --all|--a*|-a)
             SHOW_GROANS=true
       ;;
-      *)
+      -*)
         :
+      ;;
+      *)
+        if [[ -d "$arg" ]]; then
+            scan_dir="$arg"
+        fi
       ;;
     esac
 done
@@ -77,7 +82,7 @@ all_up_to_date=true
 for name in "${!signature[@]}"; do
       files=()
       latest=""
-      for file in $(grep -rl "${signature[$name]}" "${g_dir}"); do
+      for file in $(grep -rl "${signature[$name]}" "${scan_dir}"); do
             files+=("$file")
             [[ -z "$latest" || "$file" -nt "$latest" ]] && latest="$file"
       done
