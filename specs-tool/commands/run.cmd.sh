@@ -83,6 +83,9 @@ run_suite() {
     out=$(cd "$suite_dir" && bash "./$suite_name" 2>&1)
     rc=$?
     printf "%s\n" "$out" | colour_filter
+    if [[ $rc -ne 0 ]]; then
+      printf "%s\n" "$out"
+    fi
   else
     (cd "$suite_dir" && bash "./$suite_name")
     rc=$?

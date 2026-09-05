@@ -66,6 +66,7 @@ describe "specs-tool prereqs" && {
     tmp_home="$(mktemp -d /tmp/groan-spec-home-XXXXXX)"
     tmp_rc="${tmp_home}/.bashrc"
     tmp_prof="${tmp_home}/.bash_profile"
+    touch "$tmp_rc" "$tmp_prof"
 
     HOME="$tmp_home" "$groan" setup self-install --alias mygroan --confirm >/dev/null 2>&1
     HOME="$tmp_home" "$groan" setup self-install --completion mygroan --confirm >/dev/null 2>&1

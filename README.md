@@ -20,7 +20,7 @@ Clone this repository, and rename 'groan' to be the top level name of YOUR comma
 Add your scripts (in any language) and help topics, to the `commands` folder. 
 
 Your command can be nested within other commands, or you can compose your command from others. 
-Pick and choose modules from the `commands/`, `setup-utility/`, and
+Pick and choose modules from the `commands/`, `setup-tool/`, and
 `tests/` folders that you wish to include in your command.
 
 ## Commands with sub-commands and sub-sub-commands...
@@ -55,7 +55,7 @@ based projects.
 * Support for additional documentation topics/reporting
 * Demonstrates simple implementation conventions and patterns (e.g. options handling)
 * Adopts the informal [bash "strict" mode](http://redsymbol.net/articles/unofficial-bash-strict-mode/) which considerably aids debugging.
-* Supports dynamic Bash autocompletion (via `--completion` or `--install`).
+* Supports dynamic Bash autocompletion (via `---completion` or `setup self-install`).
 
 ## Features
 
@@ -109,10 +109,12 @@ Groan (sub)commands are called after having:
 * found and 'sourced' a config-file.
 * found and 'sourced' metadata (if separate).
 
-All subcommands support
-* --origin
-* --update
-* --install
+### Setup and Maintenance subcommands (`setup-tool`)
+Setup, environment discovery, and lifecycle management have moved into the `setup` sub-suite:
+
+* `groan setup environment --origin`: inspect repository remote origin URL
+* `groan setup update`: pull latest code and submodules or update data libraries
+* `groan setup self-install`: configure shell aliases, autocompletions, or PATH symlinks
 
 ## Bash Autocompletion
 
@@ -132,7 +134,7 @@ Or append it to your `~/.bashrc` / `~/.bash_profile`:
 groan ---completion >> ~/.bashrc
 ```
 
-Running `groan --install` automatically registers alias and autocompletion bindings in `~/.bashrc`.
+Running `groan setup self-install --completion --confirm` automatically registers autocompletion bindings in `~/.bash_profile`.
 
 ### How it Works
 
@@ -208,7 +210,7 @@ prints out the environment variables (or evaluates a given expression) in the co
 
 A number of template conf files can be provided, the user can choose a file and a place to install it. Out of the box, local, user and global config options are provided
 
-    ./groan configure --options
+    ./groan setup configure --options
     Available options:
     1) local config  : /Users/coding/wip/groan.conf
     2) user config   : /Users/bob/.groan.conf
@@ -219,11 +221,11 @@ A number of template conf files can be provided, the user can choose a file and 
         
     Install configuration with:
     
-    ./groan config default.conf --install --local --confirm 
-        
+    ./groan setup configure --install=local default.conf
+
 ### Subcommand - self-install
 
-    groan setup /usr/local/bin --link --confirm
+    groan setup self-install --link /usr/local/bin --confirm
 
 ## Sub-command aliasing
 
@@ -234,4 +236,4 @@ script in the parent's `commands/` folder; the framework recognises the
 
 ## Test Suite
 
-The comprehensive test suite is here http://github.com/keithy/groan-a-lot using the `bash-spec` framework.
+The comprehensive test suite is here https://gitlab.com/keithy/groan-dev using the `bash-spec` framework.
