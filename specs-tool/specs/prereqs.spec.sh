@@ -103,6 +103,15 @@ describe "specs-tool end-to-end" && {
     expect_array out to_contain '  specs-tool           specs/ (1 file)'
   }
 
+  it "groan resolves symlinks so commands are discovered when invoked via symlink" && {
+    tmp_bin="$(mktemp -d /tmp/groan-spec-bin-XXXXXX)"
+    ln -s "$groan" "$tmp_bin/mytool"
+    capture out <( "$tmp_bin/mytool" --theme=off )
+    rm -rf "$tmp_bin"
+    expect_array out to_contain 'commands:'
+    expect_array out to_contain 'groan setup              setup tool (setup-tool sub-suite)'
+  }
+
   # NOTE: we deliberately do NOT test `./groan specs run specs-tool`
   # from inside specs-tool's own suite. That would recurse: the runner
   # would source prereqs.spec.sh, which would invoke the runner
