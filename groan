@@ -536,7 +536,7 @@ function p_options ()
 
 function _p_usage ()
 {
-  p_cols "${s_usage:-\n$breadcrumbs}B" 
+  p_cols "${s_usage:-\n$breadcrumbs}" 
   echo
 }
 
