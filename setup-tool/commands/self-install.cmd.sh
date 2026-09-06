@@ -207,6 +207,9 @@ if $ADDLINK; then
             echo "Installed symbolic link from $installPath/${g_file} to ${g_path}"
         else
             echo "failed"
+            if ! $FORCELINK; then
+                echo "Use --force (-f) to overwrite an existing link or file."
+            fi
         fi
     fi
     exit 0
