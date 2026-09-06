@@ -24,6 +24,7 @@ s_opts=\
 --completion[=<name>] generate autocompletion snippet (or install with --confirm) ;
 --link [path]        create symbolic link in system PATH ; (default: /usr/local/bin)
 --unlink             remove installed symbolic link from system PATH ;
+--force | -f         overwrite existing symlink when using --link ;
 "
 
 s_usage=\
@@ -32,6 +33,7 @@ $breadcrumbs --unalias [name] --confirm        ; remove alias from ~/.bash_profi
 $breadcrumbs --completion [name]               ; print completion snippet (for eval)
 $breadcrumbs --completion [name] --confirm     ; install completion into ~/.bash_profile
 $breadcrumbs [/usr/local/bin] --link --confirm ; create symlink in target PATH directory
+$breadcrumbs [/usr/local/bin] --link -f -Y     ; overwrite existing symlink in target PATH directory
 $breadcrumbs --unlink --confirm                ; remove installed symlink from PATH"
 
 $METADATAONLY && return
@@ -61,12 +63,16 @@ UNALIAS=false
 COMPLETION=false
 ADDLINK=false
 UNLINK=false
+FORCELINK=false
 aliasName="$g_cmd"
 installPath="/usr/local/bin"
 
 for arg in "$@"
 do
     case "$arg" in
+    --force | -f)
+        FORCELINK=true
+    ;;
     --alias | --alias=*)
         ADDALIAS=true
         if [[ "$arg" == --alias=* ]]; then
@@ -191,10 +197,13 @@ if $ADDLINK; then
         exit 1
     fi
 
-    $LOUD && echo "ln -s ${g_path} $installPath/${g_file}"
+    local ln_opts="-s"
+    $FORCELINK && ln_opts="-sf"
+
+    $LOUD && echo "ln $ln_opts ${g_path} $installPath/${g_file}"
     $DRYRUN && echo "dryrun: --confirm required to proceed"
     if $CONFIRM; then
-        if ln -s "${g_path}" "$installPath/${g_file}"; then
+        if ln $ln_opts "${g_path}" "$installPath/${g_file}"; then
             echo "Installed symbolic link from $installPath/${g_file} to ${g_path}"
         else
             echo "failed"
