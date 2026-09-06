@@ -99,8 +99,9 @@ describe "specs-tool end-to-end" && {
   }
 
   it "./groan specs list discovers specs-tool's own suite" && {
+    root_name="${groan_root_repo##*/}"
     capture out <( cd "$groan_root_repo" && "$groan" --theme=off specs list 2>&1 )
-    expect_array out to_contain '  specs-tool           specs/ (1 file)'
+    expect_array out to_contain "  ${root_name}/specs-tool/specs         (1 file)"
   }
 
   it "./groan specs run without args suggests --all without duplicating breadcrumb" && {

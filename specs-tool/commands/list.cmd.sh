@@ -19,14 +19,10 @@ while IFS= read -r suite_dir; do
   count=$(find "$suite_dir" -type f \( -name '*spec*.sh' -o -name '*test*.sh' \) | wc -l | tr -d ' ')
   [[ "$count" -gt 0 ]] || continue
   found=1
-  if [[ "$suite_dir" == "$groan_root/specs" || "$suite_dir" == "$groan_root/tests" ]]; then
-    tool="${g_context:-${groan_root##*/}}"
-  else
-    tool=${suite_dir%/*}
-    tool=${tool##*/}
-  fi
-  subdir=${suite_dir##*/}
-  printf "  %-20s %s/ (%s file%s)\n" "$tool" "$subdir" "$count" "$([[ "$count" == 1 ]] && echo '' || echo s)"
+  rel_path="${suite_dir#$groan_root/}"
+  context_name="${g_context:-${groan_root##*/}}"
+  display_path="${context_name}/${rel_path}"
+  printf "  %-30s (%s file%s)\n" "$display_path" "$count" "$([[ "$count" == 1 ]] && echo '' || echo s)"
 done < <(find "$groan_root" -mindepth 1 -maxdepth 2 -type d \( -name specs -o -name tests \) 2>/dev/null | sort)
 
 if [[ $found -eq 0 ]]; then

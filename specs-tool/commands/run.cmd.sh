@@ -159,18 +159,23 @@ case "${1:-}" in
   *)
     tool="$1"
     local root_name="${g_context:-${groan_root##*/}}"
-    if [[ "$tool" == "root" || "$tool" == "$root_name" ]]; then
+    # Strip leading context prefix if user specified e.g. "bashaform/specs" or "bashaform/specs-tool"
+    if [[ "$tool" == "$root_name/"* ]]; then
+      tool="${tool#$root_name/}"
+    fi
+
+    if [[ "$tool" == "root" || "$tool" == "$root_name" || "$tool" == "specs" || "$tool" == "tests" ]]; then
       suite_dir="$groan_root/specs"
       [[ -d "$suite_dir" ]] || suite_dir="$groan_root/tests"
+    elif [[ -d "$groan_root/$tool" ]]; then
+      suite_dir="$groan_root/$tool"
+      [[ "$suite_dir" != */specs && "$suite_dir" != */tests ]] && {
+        [[ -d "$suite_dir/specs" ]] && suite_dir="$suite_dir/specs"
+        [[ -d "$suite_dir/tests" ]] && suite_dir="$suite_dir/tests"
+      }
     else
       suite_dir="$groan_root/$tool/specs"
       [[ -d "$suite_dir" ]] || suite_dir="$groan_root/$tool/tests"
-      if [[ ! -d "$suite_dir" ]]; then
-        # check if tool directly refers to a suite directory under root
-        if [[ -d "$groan_root/$tool" && ("$tool" == "specs" || "$tool" == "tests") ]]; then
-          suite_dir="$groan_root/$tool"
-        fi
-      fi
     fi
     if [[ ! -d "$suite_dir" ]]; then
       echo "no specs/ or tests/ under $groan_root/$tool" >&2
