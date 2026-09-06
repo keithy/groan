@@ -158,7 +158,8 @@ case "${1:-}" in
 
   *)
     tool="$1"
-    if [[ "$tool" == "root" ]]; then
+    local root_name="${g_context:-${groan_root##*/}}"
+    if [[ "$tool" == "root" || "$tool" == "$root_name" ]]; then
       suite_dir="$groan_root/specs"
       [[ -d "$suite_dir" ]] || suite_dir="$groan_root/tests"
     else

@@ -20,7 +20,7 @@ while IFS= read -r suite_dir; do
   [[ "$count" -gt 0 ]] || continue
   found=1
   if [[ "$suite_dir" == "$groan_root/specs" || "$suite_dir" == "$groan_root/tests" ]]; then
-    tool="root"
+    tool="${g_context:-${groan_root##*/}}"
   else
     tool=${suite_dir%/*}
     tool=${tool##*/}
