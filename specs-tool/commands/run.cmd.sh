@@ -152,14 +152,25 @@ case "${1:-}" in
 
   "")
     echo "specs: missing tool name or flag"
-    echo "Try: $breadcrumbs run --all"
+    echo "Try: $breadcrumbs --all"
     exit 1
     ;;
 
   *)
     tool="$1"
-    suite_dir="$groan_root/$tool/specs"
-    [[ -d "$suite_dir" ]] || suite_dir="$groan_root/$tool/tests"
+    if [[ "$tool" == "root" ]]; then
+      suite_dir="$groan_root/specs"
+      [[ -d "$suite_dir" ]] || suite_dir="$groan_root/tests"
+    else
+      suite_dir="$groan_root/$tool/specs"
+      [[ -d "$suite_dir" ]] || suite_dir="$groan_root/$tool/tests"
+      if [[ ! -d "$suite_dir" ]]; then
+        # check if tool directly refers to a suite directory under root
+        if [[ -d "$groan_root/$tool" && ("$tool" == "specs" || "$tool" == "tests") ]]; then
+          suite_dir="$groan_root/$tool"
+        fi
+      fi
+    fi
     if [[ ! -d "$suite_dir" ]]; then
       echo "no specs/ or tests/ under $groan_root/$tool" >&2
       exit 2

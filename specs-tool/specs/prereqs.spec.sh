@@ -103,6 +103,11 @@ describe "specs-tool end-to-end" && {
     expect_array out to_contain '  specs-tool           specs/ (1 file)'
   }
 
+  it "./groan specs run without args suggests --all without duplicating breadcrumb" && {
+    capture out <( cd "$groan_root_repo" && "$groan" --theme=off specs run 2>&1 || true )
+    expect_array out to_contain 'Try: groan specs run --all'
+  }
+
   it "groan resolves symlinks so commands are discovered when invoked via symlink" && {
     tmp_bin="$(mktemp -d /tmp/groan-spec-bin-XXXXXX)"
     ln -s "$groan" "$tmp_bin/mytool"

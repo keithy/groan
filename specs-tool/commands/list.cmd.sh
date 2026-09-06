@@ -17,12 +17,16 @@ groan_root="${my_path%/*/*/*}"
 found=0
 while IFS= read -r suite_dir; do
   found=1
-  tool=${suite_dir%/*}
-  tool=${tool##*/}
+  if [[ "$suite_dir" == "$groan_root/specs" || "$suite_dir" == "$groan_root/tests" ]]; then
+    tool="root"
+  else
+    tool=${suite_dir%/*}
+    tool=${tool##*/}
+  fi
   subdir=${suite_dir##*/}
   count=$(find "$suite_dir" -type f \( -name '*spec*.sh' -o -name '*test*.sh' \) | wc -l | tr -d ' ')
   printf "  %-20s %s/ (%s file%s)\n" "$tool" "$subdir" "$count" "$([[ "$count" == 1 ]] && echo '' || echo s)"
-done < <(find "$groan_root" -mindepth 2 -maxdepth 2 -type d \( -name specs -o -name tests \) 2>/dev/null | sort)
+done < <(find "$groan_root" -mindepth 1 -maxdepth 2 -type d \( -name specs -o -name tests \) 2>/dev/null | sort)
 
 if [[ $found -eq 0 ]]; then
   echo "no tool sub-dirs under $groan_root contain a specs/ or tests/ directory"
