@@ -80,14 +80,16 @@ run_suite() {
   suite_dir="$(dirname -- "$suite")"
   suite_name="$(basename -- "$suite")"
   if [[ "$mode" == summarised ]]; then
-    out=$(cd "$suite_dir" && bash "./$suite_name" 2>&1)
+    out=$(cd "$suite_dir" && BASH_SPEC_PATH="${groan_root}/groan/specs-tool/lib/bash-spec.sh" \
+          bash "./$suite_name" 2>&1)
     rc=$?
     printf "%s\n" "$out" | colour_filter
     if [[ $rc -ne 0 ]]; then
       printf "%s\n" "$out"
     fi
   else
-    (cd "$suite_dir" && bash "./$suite_name")
+    (cd "$suite_dir" && BASH_SPEC_PATH="${groan_root}/groan/specs-tool/lib/bash-spec.sh" \
+     bash "./$suite_name")
     rc=$?
   fi
   if [[ $rc -eq 0 ]]; then SUITE_STATUS=pass; else SUITE_STATUS=fail; fi

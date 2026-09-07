@@ -34,6 +34,8 @@ export bash_spec
 
 # On first entry, re-exec the calling script under a clean env. On
 # re-entry (after the exec), fall through and source the runner.
+# BASH_SPEC_PATH is forwarded explicitly so callers can override the
+# runner location without depending on the sibling-fallback heuristic.
 if [[ -z "${_CLEAN_:-}" ]]; then
   script="${this:-${BASH_SOURCE[1]:-${BASH_SOURCE[0]}}}"
   exec env -i _CLEAN_=1 \
@@ -44,6 +46,7 @@ if [[ -z "${_CLEAN_:-}" ]]; then
     VERBOSE="${VERBOSE:-false}" \
     INIT="${INIT:-false}" \
     FAILME="${FAILME:-false}" \
+    BASH_SPEC_PATH="${bash_spec}" \
     bash "$script" "$@"
 fi
 
