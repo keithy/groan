@@ -21,16 +21,14 @@ s_usage=""
 ${METADATAONLY:-false} && return
 
 # Locate specs-tool's lib relative to this script. The script lives at
-# specs-tool/specs/prereqs.spec.sh; lib is ../lib/bash-spec-2.sh.
+# specs-tool/specs/prereqs.spec.sh; lib is ../lib/bash-spec-clean-env.sh.
 this="${BASH_SOURCE[0]}"
 here="$(cd -- "${this%/*}" 2>/dev/null && pwd -P)"
 
 # Source specs-tool's vendored helper. Unlike other suites, this one
 # runs INSIDE specs-tool itself, so we can hardcode the lib path
 # without ambiguity.
-source "${here}/../lib/bash-spec-2.sh"
-rerun_in_clean_bash
-source "$bash_spec"
+source "${here}/../lib/bash-spec-clean-env.sh"
 
 # specs-tool's path (the sub-suite directory).
 specs_tool_dir="${here%/*}"
@@ -54,8 +52,8 @@ describe "specs-tool prereqs" && {
     command -v realpath >/dev/null
   }
 
-  it "specs-tool/lib/bash-spec-2.sh is sourceable" && {
-    [[ -f "${here}/../lib/bash-spec-2.sh" ]]
+  it "specs-tool/lib/bash-spec-clean-env.sh is sourceable" && {
+    [[ -f "${here}/../lib/bash-spec-clean-env.sh" ]]
   }
 
   it "the bash-spec runner is reachable from specs-tool's lib" && {
