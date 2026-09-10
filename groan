@@ -344,21 +344,20 @@ function g_executeScriptPath ()
 function _g_executeScriptPath ()
 {  
   g_parseScriptPathMore "$1"
-  #s_alias="${s_alias:-$s_cmd}" 
-  # When set -u is enabled bash<=4.1, this pattern
-  # is needed: "${args[@]:+${args[@]}}"
+  #s_alias="${s_alias:-$s_cmd}"
+  # bash 4.4+ supports empty arrays directly under set -u.
 
   $METADATAONLY && local status="Metadata" || local status="Running"
 
   case "${s_ext}" in
     conf)
         $GDEBUG && p_echo "$status< $s_path"
-        g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" && $METADATAONLY && return 0
+        g_pathScriptMappingArgs "$s_path" "${args[@]}" && $METADATAONLY && return 0
 
         for script in "${s_dir}/${s_file%.*.conf}" "${s_dir}/${s_file%.*.conf}".*
         do
           if [[ "$script" != "$s_path" ]] && [[ -f "$script" ]]; then
-            g_executeScriptPath "$script" "${args[@]:+${args[@]}}"
+            g_executeScriptPath "$script" "${args[@]}"
               
             $SHOWHELP && g_displayHelp && exit  # moved to post dispatch
             $METADATAONLY && return 0            
@@ -367,26 +366,26 @@ function _g_executeScriptPath ()
         done
     ;;
     sh)
-        $GDEBUG && p_echo "$status source> $(p_dir "$s_path") ${args[@]:+${args[@]}}"        
+        $GDEBUG && p_echo "$status source> $(p_dir "$s_path") ${args[@]}"        
         $XDEBUG && set -x
-        g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}"
+        g_pathScriptMappingArgs "$s_path" "${args[@]}"
         $XDEBUG && set +x
         $SHOWHELP && g_displayHelp && exit 0
     ;;
     exec)
-        $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
+        $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]}"
 
-        $METADATAONLY && g_pathScriptMappingArgs "$s_path" "${args[@]:+${args[@]}}" \
-                      || exec "$s_path" "${args[@]:+${args[@]}}"
+        $METADATAONLY && g_pathScriptMappingArgs "$s_path" "${args[@]}" \
+                      || exec "$s_path" "${args[@]}"
 
     ;;
     ps1)
-        $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
-        exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$s_path" "${args[@]:+${args[@]}}"
+        $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]}"
+        exec powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$s_path" "${args[@]}"
     ;; 
     su)
-        $GDEBUG && p_echo "$status sudo> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
-        sudo "$s_path" "${args[@]:+${args[@]}}"
+        $GDEBUG && p_echo "$status sudo> $(p_dir "$s_path") ${args[@]}"
+        sudo "$s_path" "${args[@]}"
     ;;
     *)
         # Refuse to eval scripts that live outside the configured
@@ -411,10 +410,10 @@ function _g_executeScriptPath ()
             p_echo "Refused: $s_path resolves outside sub-command locations"
             return 1
         fi
-        $GDEBUG && p_echo "$status run> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
+        $GDEBUG && p_echo "$status run> $(p_dir "$s_path") ${args[@]}"
         $XDEBUG && set -x
         local exit_code=0
-        "$s_path" "${args[@]:+${args[@]}}" || exit_code=$?
+        "$s_path" "${args[@]}" || exit_code=$?
         $XDEBUG && set +x
         exit $exit_code
     ;;
@@ -613,7 +612,7 @@ function g_onEXIT__where ()
 function g_onEXIT__options ()
 {
   local vars
-  g_join_into vars '|' "${g_option_vars[@]}"
+  u_joinInto vars '|' "${g_option_vars[@]}"
   env | grep -E "^($vars)"
 }
 
@@ -651,25 +650,16 @@ function g_shiftInto_g_next ()
 {
     g_prev="${g_next:-}"
     g_next=""
-    local arg params=() found=false
-    if [[ "${#args[@]}" -gt 0  ]]; then
-      for arg in "${args[@]}"
-      do 
-        if ! $found; then
-          if [[ "$arg" == '--' ]]; then
-            found=true
-            continue
-          elif [[ "${arg:0:1}" != "-" ]]; then
-            g_next="$arg"
-            found=true
-            continue
-          fi
-        fi
-        params+=("$arg") 
-      done
-    fi
-    args=("${params[@]:+${params[@]}}")
-    [[ -n "${g_next}" ]]
+    local params=()
+    for arg in "${args[@]}"; do
+      if [[ -z "$g_next" && ( "$arg" == "--" || "${arg:0:1}" != "-" ) ]]; then
+        g_next="$arg"
+      else
+        params+=("$arg")
+      fi
+    done
+    args=("${params[@]}")
+    [[ -n "$g_next" ]]
 }
 
 function g_parseScriptPath ()
@@ -735,7 +725,7 @@ function g_dispatch ()
 
     local prev_breadcrumbs="$breadcrumbs"
     breadcrumbs+=" ${s_sub_cmd:-$s_cmd}"
-    g_executeScriptPath "$s_path" "${args[@]:+${args[@]}}"
+    g_executeScriptPath "$s_path" "${args[@]}"
     breadcrumbs="$prev_breadcrumbs"
 
     $SHOWHELP && g_displayHelp && exit 0
@@ -1011,13 +1001,13 @@ function g_actions ()
 
   g_declare_options LIST_ALL_CMD LIST_CMD=true
   
-  for arg in "${args[@]:+${args[@]}}"
+  for arg in "${args[@]}"
   do
     case "$arg" in
       --*=* | --* )
         local opt="${arg%%=*}" param="${arg#*=}"
         [[ $(type -t g_option${opt}) == function ]] \
-          && g_option${opt} "${param}" "${args[@]:+${args[@]}}" && exit 0
+          && g_option${opt} "${param}" "${args[@]}" && exit 0
       ;;
     esac
   done
@@ -1142,7 +1132,7 @@ function g_handleAutocomplete ()
 {
   local ac_words=()
   local arg
-  for arg in "${args[@]:+${args[@]}}"; do
+  for arg in "${args[@]}"; do
     if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
       break
     else
@@ -1315,7 +1305,7 @@ function g_option---AUTOCOMPLETE ()
   g_handleAutocomplete
 }
 
-for arg in "${args[@]:+${args[@]}}"; do
+for arg in "${args[@]}"; do
   if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
     g_handleAutocomplete
   fi
