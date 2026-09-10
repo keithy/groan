@@ -44,6 +44,10 @@ g_options_common_horizontal=\
 set -euo pipefail
 IFS=$'\n\t'
 shopt -s nullglob # make sure globs are empty arrays if nothing is found
+# allexport is on so plain assignments in this file (NL, g_types, bold, ...)
+# and in user .conf files flow into sourced sub-commands without each having
+# to be declared `export`. Style constants like bold/dim are leaked too —
+# tolerated because they're inert. local/declare -g are unaffected.
 set -o allexport
 NL=$'\n' # useful
 
@@ -185,9 +189,9 @@ function g_find () #1) type_string #2) filename #) dirs to look
     do
        g_found="${dir}/${name}"
 
-       if [[ -f "${g_found}" ]]; then         
-          $GDEBUG || $CDEBUG && p_echo "${type}< $(p_dir "$dir")/${name}"
-          return 0
+       if [[ -f "${g_found}" ]]; then
+         ($GDEBUG || $CDEBUG) && p_echo "${type}< $(p_dir "$dir")/${name}"
+         return 0
        fi
        $CDEBUG && p_echo "${type}? $(p_dir "$dir")/${name}"
     done
@@ -396,7 +400,7 @@ function _g_executeScriptPath ()
         else
             resolved="$(cd -- "$(dirname -- "$s_path")" 2>/dev/null && pwd -P)/$(basename -- "$s_path")"
         fi
-        [[ -z "$resolved" ]] && { $LOUD && p_echo "Refused: cannot resolve $s_path"; return 1; }
+        [[ -z "$resolved" ]] && { p_echo "Refused: cannot resolve $s_path"; return 1; }
         for allowed in "${g_subcmd_locations[@]}"; do
             if [[ "$resolved" == "$allowed"/* ]] || [[ "$resolved" == "$allowed" ]]; then
                 safe=true
@@ -404,7 +408,7 @@ function _g_executeScriptPath ()
             fi
         done
         if ! $safe; then
-            $LOUD && p_echo "Refused: $s_path resolves outside sub-command locations"
+            p_echo "Refused: $s_path resolves outside sub-command locations"
             return 1
         fi
         $GDEBUG && p_echo "$status run> $(p_dir "$s_path") ${args[@]:+${args[@]}}"
@@ -509,11 +513,6 @@ function p_embolden_first_line () # (ignores empty first line)
   done <<<"$1"
 }
 
-function bold ()
-{
-  printf "${bold}%s${reset}\n" "$($@)"
-}
-
 function loud ()
 {
   $LOUD && $@
@@ -545,7 +544,7 @@ function _p_usage ()
 
 function p_usage ()
 {
-  bold echo "usage:"   
+  printf "${bold}usage:${reset}\n"
   _p_usage
 
   [[ -n ${s_usage_+x} ]] && printf "${s_usage_}"
@@ -565,7 +564,8 @@ function g_debug_kv ()
 }
 
 function p_echo () {
-  >&2 $LOUD && echo "$@" # or { printf "%s\n" "$*" >&2; }
+  $LOUD || return 0
+  printf '%s\n' "$*" >&2
 }
 
 g_option_vars=()
@@ -743,7 +743,7 @@ function g_dispatch ()
 
   else # not found
 
-    $LOUD && p_echo "Not Found: $breadcrumbs"
+    p_echo "Not Found: $breadcrumbs"
     exit 1
   fi
 }
@@ -920,8 +920,8 @@ function g_listCmds()
   #p_embolden_first_line "${c_description}\n" 
   p_command_description
   
-  bold echo "commands:"
-  p_cmdDefaultEntry "$crumbs" " (this list)"  
+  printf "${bold}commands:${reset}\n"
+  p_cmdDefaultEntry "$crumbs" " (this list)"
   # p_c1 "$crumbs" ; echo "this list"
 
   g_eachSubMetaDo c_select p_scriptEntry "${crumbs}" && echo
@@ -968,7 +968,7 @@ function g_listAllSubCmds ()
 
   p_description
 
-  bold p_cmdDefaultEntry "$crumbs"
+  printf "${bold}%s${reset}\n" "$(p_cmdDefaultEntry "$crumbs")"
   g_eachSubMetaDo $s_select_fn p_scriptEntry "$crumbs" && echo || true
 
   # Recurse into dispatcher aliases: walk g_locations[], find files matching
