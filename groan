@@ -53,6 +53,7 @@ NL=$'\n' # useful
 function me () # BASH_SOURCE
 {
   $MEDEBUG && printf "\n\e[2m${1%/*}/\e[1m${1##*/}\e[0m\n" # dim/bold
+  local original_basename="${1##*/}"
   local target="${1}"
   while [[ -L "$target" ]]; do
     local link_target
@@ -63,7 +64,9 @@ function me () # BASH_SOURCE
       target="$(dirname "$target")/$link_target"
     fi
   done
-  my_path=$(cd -- "$(dirname -- "${target}")" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$(basename -- "${target}")")
+  local resolved_dir
+  resolved_dir="$(cd -- "$(dirname -- "${target}")" 2>/dev/null && pwd -P)"
+  my_path="${resolved_dir}/${original_basename}"
 }
 
 ##############################################################
