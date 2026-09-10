@@ -210,39 +210,39 @@ function p_dir ()
 ##############################################################
 # rudimentary yaml parser
 function u_parseYaml {
-   local prefix=$2
-   local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$'\034'
-   sed -ne "s|^\($s\):|\1|" \
-        -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
-        -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
-   awk -F$fs '{
-      indent = length($1)/2;
-      vname[indent] = $2;
-      for (i in vname) {if (i > indent) {delete vname[i]}}
-      if (length($3) > 0) {
-         vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
-         printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
-      }
-   }'
+  local prefix=$2
+  local s='[[:space:]]*' w='[a-zA-Z0-9_]*' fs=$'\034'
+  sed -ne "s|^\($s\):|\1|" \
+      -e "s|^\($s\)\($w\)$s:$s[\"']\(.*\)[\"']$s\$|\1$fs\2$fs\3|p" \
+      -e "s|^\($s\)\($w\)$s:$s\(.*\)$s\$|\1$fs\2$fs\3|p"  $1 |
+  awk -F$fs '{
+    indent = length($1)/2;
+    vname[indent] = $2;
+    for (i in vname) {if (i > indent) {delete vname[i]}}
+    if (length($3) > 0) {
+        vn=""; for (i=0; i<indent; i++) {vn=(vn)(vname[i])("_")}
+        printf("%s%s%s=\"%s\"\n", "'$prefix'",vn, $2, $3);
+    }
+  }'
 }
 
 ##############################################################
 # useful
 function u_joinInto () {
-    # $1 is return variable name
-    # $2 is sep
-    # $3... are the elements to join
-    local retname=$1 sep="$2" ret="${3:-}"
-    shift 3 || shift $(($#))
-    printf -v "$retname" "%s" "$ret${@/#/$sep}"
+  # $1 is return variable name
+  # $2 is sep
+  # $3... are the elements to join
+  local retname=$1 sep="$2" ret="${3:-}"
+  shift 3 || shift $(($#))
+  printf -v "$retname" "%s" "$ret${@/#/$sep}"
 }
 
 ##############################################################
 # useful
 function u_splitInto() {
-    # $1 is return array variable name
-    # $2 is sep (single char)
-    IFS="$2" read -r -a "$1" <<< "$3"
+  # $1 is return array variable name
+  # $2 is sep (single char)
+  IFS="$2" read -r -a "$1" <<< "$3"
 }
 
 ##############################################################
@@ -277,16 +277,16 @@ u_PLATFORM="${BASH_VERSINFO[5]:-$OSTYPE}" # || use $OSTYPE
 # Ensure that sudo is available
 #
 function u_needsSudo() {
-    local prompt
-    prompt=$(sudo -nv 2>&1)
-    if [ $? -eq 0 ]; then
-       $GDEBUG && p_echo "User has 'sudo' access."
-    elif p_echo "$prompt" | grep -q '^sudo:'; then
-       $GDEBUG && p_echo "User has sudo (password required)"
-    else
-       p_echo "this action requires 'sudo' access."
-       exit 1
-    fi
+  local prompt
+  prompt=$(sudo -nv 2>&1)
+  if [ $? -eq 0 ]; then
+    $GDEBUG && p_echo "User has 'sudo' access."
+  elif p_echo "$prompt" | grep -q '^sudo:'; then
+    $GDEBUG && p_echo "User has sudo (password required)"
+  else
+    p_echo "this action requires 'sudo' access."
+    exit 1
+  fi
 }
 
 function u_deleteLines 	# in-place one liner
@@ -395,20 +395,20 @@ function _g_executeScriptPath ()
         # g_subcmd_locations[] directories.
         local resolved safe=false
         if command -v realpath >/dev/null 2>&1; then
-            resolved="$(realpath "$s_path" 2>/dev/null)"
+          resolved="$(realpath "$s_path" 2>/dev/null)"
         else
-            resolved="$(cd -- "$(dirname -- "$s_path")" 2>/dev/null && pwd -P)/$(basename -- "$s_path")"
+          resolved="$(cd -- "$(dirname -- "$s_path")" 2>/dev/null && pwd -P)/$(basename -- "$s_path")"
         fi
         [[ -z "$resolved" ]] && { p_echo "Refused: cannot resolve $s_path"; return 1; }
         for allowed in "${g_subcmd_locations[@]}"; do
-            if [[ "$resolved" == "$allowed"/* ]] || [[ "$resolved" == "$allowed" ]]; then
-                safe=true
-                break
-            fi
+          if [[ "$resolved" == "$allowed"/* ]] || [[ "$resolved" == "$allowed" ]]; then
+            safe=true
+            break
+          fi
         done
         if ! $safe; then
-            p_echo "Refused: $s_path resolves outside sub-command locations"
-            return 1
+          p_echo "Refused: $s_path resolves outside sub-command locations"
+          return 1
         fi
         $GDEBUG && p_echo "$status run> $(p_dir "$s_path") ${args[@]}"
         $XDEBUG && set -x
@@ -623,24 +623,24 @@ function g_onEXIT__groan ()
 
 function g_onEXIT__env ()
 {
-    env | sed "s/$/${reset}/" # fix unhelpful colour changes
+  env | sed "s/$/${reset}/" # fix unhelpful colour changes
 }
 
 function g_onEXIT__var ()
 {
-    p_kv "$show_me_variable" "${!show_me_variable}"
+  p_kv "$show_me_variable" "${!show_me_variable}"
 }
 
 ##############################################################
 # deprecate?
 function g_view { # Check for Markdown Viewer other wise cat
-    if [[ -z $(command -v "${g_markdown_viewer%% *}") ]]; then
-	    $GDEBUG && p_echo "Markdown viewer: $g_markdown_viewer"
-    
-		"${g_markdown_viewer%% *}" "${g_markdown_viewer#* }" "$1"
-    else
-    	cat "$1"
-    fi  
+  if [[ -z $(command -v "${g_markdown_viewer%% *}") ]]; then
+    $GDEBUG && p_echo "Markdown viewer: $g_markdown_viewer"
+  
+  "${g_markdown_viewer%% *}" "${g_markdown_viewer#* }" "$1"
+  else
+    cat "$1"
+  fi  
 }
 
 ##############################################################
@@ -648,18 +648,18 @@ function g_view { # Check for Markdown Viewer other wise cat
 #
 function g_shiftInto_g_next ()
 {
-    g_prev="${g_next:-}"
-    g_next=""
-    local params=()
-    for arg in "${args[@]}"; do
-      if [[ -z "$g_next" && ( "$arg" == "--" || "${arg:0:1}" != "-" ) ]]; then
-        g_next="$arg"
-      else
-        params+=("$arg")
-      fi
-    done
-    args=("${params[@]}")
-    [[ -n "$g_next" ]]
+  g_prev="${g_next:-}"
+  g_next=""
+  local params=()
+  for arg in "${args[@]}"; do
+    if [[ -z "$g_next" && ( "$arg" == "--" || "${arg:0:1}" != "-" ) ]]; then
+      g_next="$arg"
+    else
+      params+=("$arg")
+    fi
+  done
+  args=("${params[@]}")
+  [[ -n "$g_next" ]]
 }
 
 function g_parseScriptPath ()
@@ -1036,80 +1036,80 @@ g_declare_options MEDEBUG XDEBUG DDEBUG DEBUG GDEBUG CDEBUG VERBOSE ENVIRONMENT 
 args=()
 for arg in "$@"
 do
-    shift # needed for the -- option
-    case "$arg" in
-      -- )
-        args+=( '--' "$@" )
-        break
-      ;;
-      ==*=* )
-        arg="${arg#==}"
-        declare "${arg%%=*}"="${arg#*=}"
-      ;;
-      ==* )
-        show_me_variable="${arg#==}"
-      ;;
-      -EXIT=* )
-        trap "g_onEXIT__${arg#-EXIT=}" EXIT
-      ;;
-      +DD | +ddebug | +deep-debug) 
-        DDEBUG=true
-      ;;
-      +GD | +groan-debug)
-        MEDEBUG=true
-        GDEBUG=true
-        DEBUG=true
-        VERBOSE=true
-        LOUD=true
-      ;;
-      +CD | +config-debug)
-        MEDEBUG=true
-        CDEBUG=true
-      ;;
-      +XD | +bash-debug)
-        XDEBUG=true
-      ;;
-      +D | +debug)
-        DEBUG=true
-        VERBOSE=true
-        LOUD=true
-      ;;
-      --help | -H | '-?' )
-        SHOWHELP=true
-        METADATAONLY=true
-      ;;
-      --verbose | -V )
-        GDEBUG=false
-        DEBUG=false
-        VERBOSE=true
-        LOUD=true
-      ;;
-      --quiet | -Q )
-        LOUD=false
-        GDEBUG=false
-        VERBOSE=false
-      ;;
-      --dry-run | -N )
-        DRYRUN=true
-        CONFIRM=false
-      ;;
-      --confirm| -Y )
-        DRYRUN=false
-        CONFIRM=true
-      ;;
-      --config=* )
-        CONFIG="${arg##--config=}"
-      ;;
-      -C=* )
-        CONFIG="${arg##-C=}"
-      ;;
-      --theme=* )
-        THEME="${arg##--theme=}"
-      ;;
-      * )
-        args+=("$arg")
-      ;;
-    esac
+  shift # needed for the -- option
+  case "$arg" in
+    -- )
+      args+=( '--' "$@" )
+      break
+    ;;
+    ==*=* )
+      arg="${arg#==}"
+      declare "${arg%%=*}"="${arg#*=}"
+    ;;
+    ==* )
+      show_me_variable="${arg#==}"
+    ;;
+    -EXIT=* )
+      trap "g_onEXIT__${arg#-EXIT=}" EXIT
+    ;;
+    +DD | +ddebug | +deep-debug) 
+      DDEBUG=true
+    ;;
+    +GD | +groan-debug)
+      MEDEBUG=true
+      GDEBUG=true
+      DEBUG=true
+      VERBOSE=true
+      LOUD=true
+    ;;
+    +CD | +config-debug)
+      MEDEBUG=true
+      CDEBUG=true
+    ;;
+    +XD | +bash-debug)
+      XDEBUG=true
+    ;;
+    +D | +debug)
+      DEBUG=true
+      VERBOSE=true
+      LOUD=true
+    ;;
+    --help | -H | '-?' )
+      SHOWHELP=true
+      METADATAONLY=true
+    ;;
+    --verbose | -V )
+      GDEBUG=false
+      DEBUG=false
+      VERBOSE=true
+      LOUD=true
+    ;;
+    --quiet | -Q )
+      LOUD=false
+      GDEBUG=false
+      VERBOSE=false
+    ;;
+    --dry-run | -N )
+      DRYRUN=true
+      CONFIRM=false
+    ;;
+    --confirm| -Y )
+      DRYRUN=false
+      CONFIRM=true
+    ;;
+    --config=* )
+      CONFIG="${arg##--config=}"
+    ;;
+    -C=* )
+      CONFIG="${arg##-C=}"
+    ;;
+    --theme=* )
+      THEME="${arg##--theme=}"
+    ;;
+    * )
+      args+=("$arg")
+    ;;
+  esac
 done
 
 ##############################################################
