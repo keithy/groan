@@ -113,7 +113,7 @@ describe "specs-tool end-to-end" && {
     capture out <( "$tmp_bin/mytool" --theme=off )
     rm -rf "$tmp_bin"
     expect_array out to_contain 'commands:'
-    expect_array out to_contain 'groan setup              setup tool (setup-tool sub-suite)'
+    expect_array out to_contain 'mytool setup              setup tool (setup-tool sub-suite)'
   }
 
   # NOTE: we deliberately do NOT test `./groan specs run specs-tool`
