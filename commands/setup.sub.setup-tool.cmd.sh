@@ -10,4 +10,4 @@ $METADATAONLY && return
 
 g_parseScriptPathMore "$s_path"
 g_readConfig "$s_dest_path"
-g_shiftInto_g_next && g_dispatch "$g_next" || g_actions
+g_nextDispatch 
