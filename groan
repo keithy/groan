@@ -787,14 +787,26 @@ function g_fireGlobalOptions ()
         fi
         ;;
       --* )
-        if [[ $(type -t g_option${arg}) == function ]]; then
-          g_option${arg} ""
-          handler_found=1
-          shift
-        else
-          new_args+=( "$arg" )
-          shift
-        fi
+        # Don't fire terminal-printing handlers here — they print output
+        # that g_actions would then duplicate via g_actionDefault.
+        # Consume --list / --list-all from args[] and let g_actions see
+        # them so its own loop's `&& exit 0` short-circuit runs once.
+        case "$arg" in
+          --list | --list-all | --all)
+            new_args+=( "$arg" )
+            shift
+            ;;
+          *)
+            if [[ $(type -t g_option${arg}) == function ]]; then
+              g_option${arg} ""
+              handler_found=1
+              shift
+            else
+              new_args+=( "$arg" )
+              shift
+            fi
+            ;;
+        esac
         ;;
       *)
         # first non-flag arg — keep, plus any remaining args
