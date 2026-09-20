@@ -712,18 +712,6 @@ function g_aliasDispatch ()
 
 function g_nextDispatch ()
 {
-  # Pre-pass: invoke any g_option--<name> handler registered by an
-  # included conf for args in the prefix before the first positional.
-  # User-defined global flags fire here so their handlers see them as
-  # soon as conffiles load. Each matched flag is removed from args[]
-  # so the dispatched sub-command never sees it.
-  #
-  # Completion tokens (---AUTOCOMPLETE / --autocomplete) are special:
-  # they may appear anywhere in args (typically as the trailing word),
-  # not just in the prefix. g_fireGlobalOptions scans the full argv
-  # for these and exits before the prefix-stop kicks in.
-  g_fireGlobalOptions "${args[@]:+${args[@]}}"
-
   if g_shiftInto_g_next; then
     g_dispatch "$g_next"
   else
@@ -1417,6 +1405,18 @@ function g_option--autocomplete ()
 }
 
 [[ "$0" != "$BASH_SOURCE" ]] && return # being sourced, end it here
+
+# Pre-pass: invoke any g_option--<name> handler registered by an
+# included conf for args in the prefix before the first positional.
+# User-defined global flags fire here so their handlers see them as
+# soon as conffiles load. Each matched flag is removed from args[]
+# so the dispatched sub-command never sees it.
+#
+# Completion tokens (---AUTOCOMPLETE / --autocomplete) are special:
+# they may appear anywhere in args (typically as the trailing word),
+# not just in the prefix. g_fireGlobalOptions scans the full argv
+# for these and exits before the prefix-stop kicks in.
+g_fireGlobalOptions "${args[@]:+${args[@]}}"
 
 g_nextDispatch 
 
