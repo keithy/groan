@@ -88,7 +88,7 @@ function me () # BASH_SOURCE
 function g_readConfig () # from conf files
 {
   local saved_sub_cmd="${s_sub_cmd:-}" saved_cmd="${s_cmd:-}"
-  g_parseScriptPath "$1"
+  g_parseCmdScriptPath "$1"
   [[ -n "$saved_sub_cmd" ]] && s_sub_cmd="$saved_sub_cmd"
   [[ -n "$saved_cmd" ]] && s_cmd="$saved_cmd"
   local commands_folder="${2:-commands}"
@@ -343,7 +343,7 @@ function g_executeScriptPath ()
 
 function _g_executeScriptPath ()
 {  
-  g_parseScriptPathMore "$1"
+  g_parseSubCmdScriptPath "$1"
   #s_alias="${s_alias:-$s_cmd}"
   # bash 4.4+ supports empty arrays directly under set -u.
 
@@ -662,7 +662,7 @@ function g_shiftInto_g_next ()
   [[ -n "$g_next" ]]
 }
 
-function g_parseScriptPath ()
+function g_parseCmdScriptPath ()
 {
   s_path="$1"
   s_file="${s_path##*/}"    # path, removing upto last '/'
@@ -679,11 +679,11 @@ function g_parseScriptPath ()
 # passing Z as the next argument.
 # Sets s_sub_cmd, s_dest_cmd, s_dest_path, s_dest_subcmd_name and
 # s_isDispatcher in the caller's scope.
-function g_parseScriptPathMore ()
+function g_parseSubCmdScriptPath ()
 {
   # First set the basic s_* fields via the shared parser so the
   # dispatcher-specific code below can rely on them.
-  g_parseScriptPath "$1"
+  g_parseCmdScriptPath "$1"
 
   s_sub_cmd=""
   s_dest_cmd=""
@@ -851,7 +851,7 @@ function g_findSubCommandScript ()
 
       for s_path in "$s_dir"/$target
       do
-        g_parseScriptPath "$s_path"
+        g_parseCmdScriptPath "$s_path"
         found+=("$s_path")
         found_cmd+=("$s_cmd")
         found_type+=("$s_type")
@@ -1062,7 +1062,7 @@ function g_listAllSubCmds ()
   for s_dir in "${iteration_locations[@]}" ; do
     for s_path in "$s_dir"/*.sub.*.cmd.* ; do
       [[ -f "$s_path" ]] || continue
-      g_parseScriptPathMore "$s_path"
+      g_parseSubCmdScriptPath "$s_path"
       $s_isDispatcher || continue
       [[ -n "$s_dest_cmd" ]] || continue
 
@@ -1251,7 +1251,7 @@ function g_handleAutocomplete ()
     else
       if g_findSubCommandScript "$pw"; then
         navigated_subcmd=true
-        g_parseScriptPathMore "$s_path"
+        g_parseSubCmdScriptPath "$s_path"
         if $s_isDispatcher && [[ -n "$s_dest_path" ]]; then
           g_readConfig "$s_dest_path"
         else
@@ -1293,10 +1293,10 @@ function g_handleAutocomplete ()
       for type in "${g_types[@]}"; do
         for path in "$dir"/*.$type.*; do
           if [[ -f "$path" ]]; then
-            g_parseScriptPath "$path"
+            g_parseCmdScriptPath "$path"
             name=""
             if [[ "$path" == *.sub.* ]]; then
-              g_parseScriptPathMore "$path"
+              g_parseSubCmdScriptPath "$path"
               name="${s_sub_cmd:-$s_cmd}"
             else
               name="$s_cmd"
