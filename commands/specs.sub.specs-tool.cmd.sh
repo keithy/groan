@@ -9,6 +9,8 @@ me "$BASH_SOURCE" #tradition
 
 s_description="spec/test runner for installed tools"
 
+$METADATAONLY && return
+
 g_parseScriptPathMore "$s_path"
 g_readConfig "$s_dest_path"
 
