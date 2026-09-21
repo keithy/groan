@@ -352,7 +352,7 @@ function _g_executeScriptPath ()
   case "${s_ext}" in
     conf)
         $GDEBUG && p_echo "$status< $s_path"
-        g_pathScriptMappingArgs "$s_path" "${args[@]}" && $METADATAONLY && return 0
+        g_pathScriptMappingArgs "$s_path" "${args[@]}" && ($METADATAONLY || $HELPONLY) && return 0
 
         for script in "${s_dir}/${s_file%.*.conf}" "${s_dir}/${s_file%.*.conf}".*
         do
@@ -360,17 +360,24 @@ function _g_executeScriptPath ()
             g_executeScriptPath "$script" "${args[@]}"
               
             $SHOWHELP && g_displayHelp && exit  # moved to post dispatch
-            $METADATAONLY && return 0            
+            ($METADATAONLY || $HELPONLY) && return 0
             exit
           fi
         done
     ;;
     sh)
-        $GDEBUG && p_echo "$status source> $(p_dir "$s_path") ${args[@]}"        
+        $GDEBUG && p_echo "$status source> $(p_dir "$s_path") ${args[@]}"
         $XDEBUG && set -x
+        # In HELPONLY mode, leaves' $METADATAONLY && return guards must
+        # trigger so they early-return after setting s_description/s_usage
+        # instead of running their body. Dispatchers must NOT short-circuit
+        # here — they need to re-dispatch into the next sub-command so
+        # --help drills down. Mirror the flag onto METADATAONLY only for
+        # non-dispatcher leaves.
+        if $HELPONLY && ! $s_isDispatcher; then METADATAONLY=true; fi
         g_pathScriptMappingArgs "$s_path" "${args[@]}"
         $XDEBUG && set +x
-        $SHOWHELP && g_displayHelp && exit 0
+        if $SHOWHELP; then g_displayHelp; exit 0; fi
     ;;
     exec)
         $GDEBUG && p_echo "$status exec> $(p_dir "$s_path") ${args[@]}"
@@ -821,7 +828,7 @@ function g_dispatch ()
     breadcrumbs="$prev_breadcrumbs"
 
     $SHOWHELP && g_displayHelp && exit 0
-    $METADATAONLY && return 0 || exit 0
+    ($METADATAONLY || $HELPONLY) && return 0 || exit 0
 
   else # not found
 
@@ -1086,7 +1093,7 @@ function g_listAllSubCmds ()
 
 function g_actions ()
 {
-  $METADATAONLY && return 0
+  ($METADATAONLY || $HELPONLY) && return 0
 
   # since help doesn't exec anything many common options don't apply
   g_options_common_vertical=""
@@ -1110,7 +1117,7 @@ function g_actions ()
 ##############################################################
 # Parsing options the groan way - first initialize all flags
 #
-g_declare_options METADATAONLY SHOWHELP CONFIRM DRYRUN=true "THEME=${THEME:-default}"
+g_declare_options METADATAONLY SHOWHELP HELPONLY CONFIRM DRYRUN=true "THEME=${THEME:-default}"
 
 ##############################################################
 # Debug verbosity levels
@@ -1168,7 +1175,7 @@ do
     ;;
     --help | -H | '-?' )
       SHOWHELP=true
-      METADATAONLY=true
+      HELPONLY=true
     ;;
     --verbose | -V )
       GDEBUG=false
