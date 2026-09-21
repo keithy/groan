@@ -694,12 +694,16 @@ function g_parseSubCmdScriptPath ()
   local scriptRoute="${s_file%%.cmd.*}"
 
   if [[ "$scriptRoute" =~ \.sub\. ]]; then
+    s_isDispatcher=true
     if [[ -f "$s_path" ]]; then
       s_sub_cmd="${scriptRoute%%.sub.*}"
       s_dest_cmd="${scriptRoute#*sub.}"
-      s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd:-$c_file}"
-      s_dest_subcmd_name="${s_file#*.cmd.}"
-      [[ "$s_dest_subcmd_name" == *.sub.* ]] && s_isDispatcher=false || s_isDispatcher=true
+      if [[ "$s_dest_cmd" =~ \. ]]; then
+        s_dest_cmd="${s_dest_cmd//./\/}"
+        s_dest_path="${s_dir%/*}/${s_dest_cmd}"
+      else
+        s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_sub_cmd}"
+      fi
     fi
   fi
 }
