@@ -630,7 +630,7 @@ function g_onEXIT__groan ()
 
 function g_onEXIT__env ()
 {
-  env | sed "s/$/${reset}/" # fix unhelpful colour changes
+  env | sed -n "/BASH_FUNC/q;s/$/${reset}/p" # fix unhelpful colour changes
 }
 
 function g_onEXIT__var ()
@@ -904,7 +904,7 @@ function g_eachSubMetaDo ()
       for path in "$dir"/*.$type.*
       do
         if [[ -f "$path" ]]; then
-          unset s_alias  s_path c_dir s_dir s_description c_cmd s_sub_cmd
+          unset s_alias  s_path s_dir s_description c_cmd s_sub_cmd
           METADATAONLY=true g_executeScriptPath "$path" ""
           $filter && $action ${@} && found=true
         fi
@@ -945,7 +945,13 @@ function p_c1 ()
 function p_cols ()
 {
   local out=""
-  if command -v column >/dev/null 2>&1; then
+  # p_cols is intended for column-shaped entries separated by ';'.
+  # Prose strings (s_usage in the tool-level conf, blank-line-separated
+  # multi-section blocks) get mangled by `column -t` which collapses
+  # blank lines and trims whitespace.  Gate the column fast-path on
+  # `;`-presence; non-`;` input falls through to the awk path, which
+  # already preserves blank lines via its `if (idx > 0)` branch.
+  if [[ "${1:-}" == *';'* ]] && command -v column >/dev/null 2>&1; then
     out="$(printf -- "${1}" | column -c 2 -s ';' -t 2> /dev/null || true)"
   fi
   if [[ -n "$out" ]]; then
@@ -1132,6 +1138,7 @@ g_declare_options MEDEBUG XDEBUG DDEBUG DEBUG GDEBUG CDEBUG VERBOSE ENVIRONMENT 
 ##############################################################
 # Top level - universal options processing pattern
 #
+g_args=("$@") # preserve for sub-commands that do forwarding
 args=()
 for arg in "$@"
 do
