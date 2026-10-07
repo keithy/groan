@@ -68,9 +68,8 @@ function me () # BASH_SOURCE
       target="$(dirname "$target")/$link_target"
     fi
   done
-  local resolved_dir
-  resolved_dir="$(cd -- "$(dirname -- "${target}")" 2>/dev/null && pwd -P)"
-  my_path="${resolved_dir}/${original_basename}"
+  my_dir="$(cd -- "$(dirname -- "${target}")" 2>/dev/null && pwd -P)"
+  my_path="${my_dir}/${original_basename}"
 }
 
 ##############################################################
