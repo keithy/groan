@@ -204,14 +204,18 @@ Two files:
    # commands/<suite>.sub.<suite-tool>.cmd.sh
    me "$BASH_SOURCE" #tradition
    s_description="<suite> sub-tool"
+
+   g_subTool "${my_dir}/../<suite>-tool" <suite>
+
    $METADATAONLY && return
-   g_parseSubCmdScriptPath "$s_path"
    g_readConfig "$s_dest_path"
    g_nextDispatch
    ```
 
-   The `.sub.X.` segment tells the dispatcher to forward the rest of argv
-   into the sub-tool's main command.
+   The `.sub.` segment in the filename marks the script as a sub-dispatcher
+   for `--list-all` discovery. The destination is declared explicitly by
+   the body via `g_subTool` (the second arg is the sub-tool's command
+   name, the first is its directory relative to `${my_dir}`).
 
 2. **Sub-tool binary** (e.g. `mytool/<suite>-tool`) — a hardlink to the
    same `groan` dispatcher. Its own `<suite>-tool.conf` declares
@@ -283,9 +287,11 @@ themes.sh before `s_opts` in your conf.
   everywhere; tolerated because they're inert, but avoid redefining
   globals in sub-commands.
 
-- **`g_parseSubCmdScriptPath`** is what makes sub-suite dispatch work.
-  Without it, `<tool> sub-suite <args>` runs `sub-suite.cmd.sh` in the
-  parent's command context, not the sub-tool's.
+- **`g_subTool`** is what makes sub-suite dispatch work in v2.5+.
+  Sub-dispatcher scripts must call it (before the `$METADATAONLY && return`
+  guard) to declare their target. Without it, `<tool> sub-suite <args>`
+  runs `sub-suite.cmd.sh` in the parent's command context, not the
+  sub-tool's.
 
 - **`$METADATAONLY && return`** — without it, sub-commands run their
   full body during `<prog> --list all`. Heavy startup (e.g. `mise
@@ -315,7 +321,7 @@ this order:
 1. [`groan`](https://gitlab.com/groaning/groan/-/blob/main) (the dispatcher) — particularly:
    - top of file: argv parsing for the shared flags,
    - `g_readConfig`, `g_executeScriptPath`, `g_pathScriptMappingArgs`,
-   - `g_parseSubCmdScriptPath` for sub-dispatch,
+   - `g_subTool` for sub-dispatch,
    - the `--list all` and `<prog> --help` rendering code (search for
      `g_onEXIT__`, `_g_bashrc_completion_`).
 2. [`groan-dev/groan/groan.conf`](https://gitlab.com/groaning/groan-dev/-/blob/main/groan/groan.conf) —
