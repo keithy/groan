@@ -369,7 +369,7 @@ function _g_executeScriptPath ()
         # here — they need to re-dispatch into the next sub-command so
         # --help drills down. Mirror the flag onto METADATAONLY only for
         # non-dispatcher leaves.
-        if $HELPONLY && [[ "${s_file}" != *.sub.* ]]; then METADATAONLY=true; fi
+        if $HELPONLY && ! g_isDispatcher; then METADATAONLY=true; fi
         g_pathScriptMappingArgs "$s_path" "${args[@]}"
         $XDEBUG && set +x
         if $SHOWHELP; then g_displayHelp; exit 0; fi
@@ -695,14 +695,24 @@ function g_parseCmdScriptPath ()
 #   s_dest_path     = $1/$2 (the sub-tool script path, even if it
 #                     doesn't exist on disk; g_readConfig + g_dispatch
 #                     treat it as a context root)
-#   s_isDispatcher  = true
+#
+# Whether this script is a dispatcher is determined by its filename
+# (g_isDispatcher below), not by this function.
 function g_subTool ()
 {
   s_sub_cmd="${s_file%%.sub.*}" # X
 
   s_dest_path="$1/$2"
   s_dest_cmd="$2"
-  s_isDispatcher=true
+}
+
+# A script is a dispatcher if its filename has a .sub. segment.
+# This is the single source of truth for the "is this a sub-tool
+# wrapper?" question — both the HELPONLY short-circuit and the
+# g_listAllSubCmds / g_handleAutocomplete filtering read it.
+function g_isDispatcher ()
+{
+  [[ "${s_file:-}" == *.sub.* ]]
 }
 
 function g_aliasDispatch ()
@@ -1058,7 +1068,7 @@ function g_listAllSubCmds ()
   g_eachSubMetaDo $s_select_fn p_scriptEntry "$crumbs" && echo || true
 
   # Recurse into dispatcher aliases: walk g_locations[], find files matching
-  # *.sub.*.cmd.* that are dispatcher aliases (s_isDispatcher=true), and
+  # *.sub.* (dispatcher aliases, identified by g_isDispatcher), and
   # re-enter at the destination suite. c_select (the previous filter,
   # c_cmd == s_cmd) only matched the legacy self-titled nesting pattern;
   # the dispatcher pattern below is the modern one.
@@ -1072,7 +1082,7 @@ function g_listAllSubCmds ()
       [[ -f "$s_path" ]] || continue
 
       METADATAONLY=true g_executeScriptPath "$s_path" ""
-      $s_isDispatcher || continue
+      g_isDispatcher || continue
       [[ -n "$s_dest_cmd" ]] || continue
 
       # Re-anchor to the destination suite and recurse with an extended crumb.
@@ -1260,7 +1270,7 @@ function g_handleAutocomplete ()
         navigated_subcmd=true
 
         METADATAONLY=true g_executeScriptPath "$s_path" ""
-        if $s_isDispatcher && [[ -n "$s_dest_path" ]]; then
+        if g_isDispatcher && [[ -n "$s_dest_path" ]]; then
           g_readConfig "$s_dest_path"
         fi
       fi
@@ -1294,7 +1304,7 @@ function g_handleAutocomplete ()
   local cand_list=()
   local dir type path name
 
-  if ! $navigated_subcmd || $s_isDispatcher; then
+  if ! $navigated_subcmd || [[ -n "${s_sub_cmd:-}" ]]; then
     for dir in "${g_subcmd_locations[@]}"; do
       for type in "${g_types[@]}"; do
         for path in "$dir"/*.$type.*; do
