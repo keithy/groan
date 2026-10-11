@@ -1235,8 +1235,7 @@ g_readConfig_TopLevel "$my_path" && g_readConfig "$my_path"
 
 function g_handleAutocomplete ()
 {
-  local ac_words=()
-  local arg
+  local ac_words=() arg
   for arg in "${args[@]}"; do
     if [[ "$arg" == "---AUTOCOMPLETE" ]] || [[ "$arg" == "--autocomplete" ]]; then
       break
@@ -1245,23 +1244,19 @@ function g_handleAutocomplete ()
     fi
   done
 
-  local cur_word=""
-  local path_words=()
+  local cur_word="" path_words=()
 
   if [[ ${#ac_words[@]} -gt 0 ]]; then
     cur_word="${ac_words[-1]}"
     path_words=("${ac_words[@]:0:${#ac_words[@]}-1}")
   fi
 
-  local navigated_subcmd=false
-  local pw
+  local navigated_subcmd=false pw
   for pw in "${path_words[@]}"; do
     [[ -z "$pw" ]] && continue
-    if [[ "$pw" == --config=* ]]; then
+    if [[ "$pw" == --config=* || "$pw" == -C=* ]]; then
       CONFIG="${pw#--config=}"
-      g_readConfig "$g_path"
-    elif [[ "$pw" == -C=* ]]; then
-      CONFIG="${pw#-C=}"
+      [[ "$pw" == -C=* ]] && CONFIG="${pw#-C=}"
       g_readConfig "$g_path"
     elif [[ "${pw:0:1}" == "-" ]]; then
       continue
@@ -1353,12 +1348,10 @@ function g_handleAutocomplete ()
     local opt
     for opt in $opts_text; do
       if [[ "$opt" == --* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
-        opt="${opt%%;*}"
-        opt="${opt%%|*}"
-        # The option is everything up to the first whitespace;
-        # anything after is the description column.
-        opt="${opt%%[[:space:]]*}"
-        [[ -n "$opt" ]] && parsed_opts+=("$opt")
+        # Strip the description column (everything from the first
+        # ';' or '|') and the trailing whitespace before it.
+        opt="${opt%%[;| ]*}"
+        parsed_opts+=("$opt")
       fi
     done
 
@@ -1367,16 +1360,12 @@ function g_handleAutocomplete ()
       fn="${fn##* }"
       if [[ "$fn" == g_option--* ]]; then
         opt_name="${fn#g_option}"
-        if [[ "$opt_name" != -* ]]; then
-          parsed_opts+=("$opt_name")
-        fi
+        [[ "$opt_name" != -* ]] && parsed_opts+=("$opt_name")
       fi
     done < <(declare -F 2>/dev/null || true)
 
     for opt in "${common_opts[@]}" "${parsed_opts[@]}"; do
-      if [[ -n "$opt" ]]; then
-        u_includes cand_list "$opt" || cand_list+=("$opt")
-      fi
+      [[ -n "$opt" ]] && u_includes cand_list "$opt" || cand_list+=("$opt")
     done
   elif [[ "$cur_word" == +* ]]; then
     local debug_opts=(
