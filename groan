@@ -1037,7 +1037,7 @@ function g_listAllSubCmds ()
       crumbs="${breadcrumbs}"
     fi
   else
-    crumbs="$1 ${crumb:-}"
+    crumbs="$1${crumb:-}"
   fi
 
   # p_kv breadcrumbs "$breadcrumbs $g_next $s_cmd $c_cmd"
@@ -1088,7 +1088,7 @@ function g_listAllSubCmds ()
       METADATAONLY=true g_executeScriptPath "$s_path" ""
 
       # Re-anchor to the destination suite and recurse with an extended crumb.
-      g_readConfig "${s_dir%/*}/${s_dest_cmd}/${s_dest_cmd}"
+      g_readConfig "$s_dest_path"
       g_listAllSubCmds "${crumbs} ${s_sub_cmd}"
 
       # Restore g_locations so the next iteration of the for loop scans
