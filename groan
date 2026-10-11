@@ -1321,32 +1321,17 @@ function g_handleAutocomplete ()
   fi
 
   if [[ "$cur_word" == -* ]]; then
+    # The top-level management options (--version, --install, ...)
+    # are valid in any context; we always list them. This loses the
+    # earlier "only show management opts at the top" filter, which
+    # was a tiny tidy but not worth the extra code.
     local common_opts=(
-      "--help"
-      "--quiet"
-      "--verbose"
-      "--dry-run"
-      "--confirm"
-      "--config="
-      "--theme="
+      "--help" "--quiet" "--verbose" "--dry-run" "--confirm"
+      "--config=" "--theme="
+      "--version" "--install" "--uninstall" "--update"
+      "--configs" "--origin" "--temp" "--env" "--which"
+      "--list" "--all" "--list-all"
     )
-
-    if ! $navigated_subcmd; then
-      common_opts+=(
-        "--version"
-        "--install"
-        "--uninstall"
-        "--update"
-        "--configs"
-        "--origin"
-        "--temp"
-        "--env"
-        "--which"
-        "--list"
-        "--all"
-        "--list-all"
-      )
-    fi
 
     local opts_text="${g_options:-} ${s_opts:-}"
     local parsed_opts=()
