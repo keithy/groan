@@ -1134,6 +1134,11 @@ g_declare_options METADATAONLY SHOWHELP HELPONLY CONFIRM DRYRUN=true "THEME=${TH
 
 g_declare_options MEDEBUG XDEBUG DDEBUG DEBUG GDEBUG CDEBUG VERBOSE ENVIRONMENT LOUD=true
 
+# Debug-flag completion candidates. Used by ---AUTOCOMPLETE when
+# the user is typing a token starting with +. Static; declare once
+# at module level.
+g_debug_opts=( "+D" "+DD" "+GD" "+CD" "+XD" "+debug" "+ddebug" "+groan-debug" "+config-debug" "+bash-debug" )
+
 ##############################################################
 # Top level - universal options processing pattern
 #
@@ -1368,19 +1373,7 @@ function g_handleAutocomplete ()
       [[ -n "$opt" ]] && u_includes cand_list "$opt" || cand_list+=("$opt")
     done
   elif [[ "$cur_word" == +* ]]; then
-    local debug_opts=(
-      "+D"
-      "+DD"
-      "+GD"
-      "+CD"
-      "+XD"
-      "+debug"
-      "+ddebug"
-      "+groan-debug"
-      "+config-debug"
-      "+bash-debug"
-    )
-    for opt in "${debug_opts[@]}"; do
+    for opt in "${g_debug_opts[@]}"; do
       u_includes cand_list "$opt" || cand_list+=("$opt")
     done
   fi
