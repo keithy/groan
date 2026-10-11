@@ -1355,7 +1355,9 @@ function g_handleAutocomplete ()
       if [[ "$opt" == --* ]] && [[ "$opt" != ";" ]] && [[ "$opt" != "|" ]]; then
         opt="${opt%%;*}"
         opt="${opt%%|*}"
-        opt="${opt//[[:space:]]/}"
+        # The option is everything up to the first whitespace;
+        # anything after is the description column.
+        opt="${opt%%[[:space:]]*}"
         [[ -n "$opt" ]] && parsed_opts+=("$opt")
       fi
     done
