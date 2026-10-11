@@ -338,7 +338,6 @@ function g_executeScriptPath ()
 
 function _g_executeScriptPath ()
 {  
-  g_parseSubCmdScriptPath "$1"
   #s_alias="${s_alias:-$s_cmd}"
   # bash 4.4+ supports empty arrays directly under set -u.
 
@@ -352,6 +351,7 @@ function _g_executeScriptPath ()
         for script in "${s_dir}/${s_file%.*.conf}" "${s_dir}/${s_file%.*.conf}".*
         do
           if [[ "$script" != "$s_path" ]] && [[ -f "$script" ]]; then
+            g_parseSubCmdScriptPath "$script"
             g_executeScriptPath "$script" "${args[@]}"
               
             $SHOWHELP && g_displayHelp && exit  # moved to post dispatch
@@ -681,8 +681,10 @@ function g_parseCmdScriptPath ()
 # Extended parser used to recognise dispatcher aliases of the form
 # <X>.sub.<Y>.cmd.<Z>.<ext> — i.e. sub-command X dispatches into command Y
 # passing Z as the next argument.
-# Sets s_sub_cmd, s_dest_cmd, s_dest_path, s_dest_subcmd_name and
-# s_isDispatcher in the caller's scope.
+# Sets s_sub_cmd, s_dest_cmd, s_dest_path and s_isDispatcher in the
+# caller's scope. s_dest_cmd and s_dest_path are derived from the
+# filename for legacy .sub.*.cmd.* scripts; scripts that use the
+# g_subTool pattern will overwrite these.
 function g_parseSubCmdScriptPath ()
 {
   # First set the basic s_* fields via the shared parser so the
@@ -693,7 +695,6 @@ function g_parseSubCmdScriptPath ()
   s_sub_cmd=""
   s_dest_cmd=""
   s_dest_path=""
-  s_dest_subcmd_name=""
   s_isDispatcher=false
 
   local scriptRoute="${s_file%%.cmd.*}" # X.sub.Y
@@ -702,18 +703,31 @@ function g_parseSubCmdScriptPath ()
     s_isDispatcher=true
     if [[ -f "$s_path" ]]; then
       s_sub_cmd="${scriptRoute%%.sub.*}" # X
-      s_dest_cmd="${scriptRoute#*sub.}" # Y  
-      if [[ "$s_dest_cmd" =~ \. ]]; then
-        # temporarily replace .. with ~~/ to avoid confusion with the next step
-        s_dest_cmd="${s_dest_cmd//../~~}" 
-        s_dest_cmd="${s_dest_cmd//./\/}" # Y becomes Y/Z if Y has dots
-        s_dest_cmd="${s_dest_cmd//~~/../}" # restore .. back to ..  
-        s_dest_path="${s_dir%/*}/${s_dest_cmd}"
-      else
-        s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_sub_cmd}"
-      fi
     fi
   fi
+}
+
+# Declare this script as a wrapper for a sub-tool. Sets the same
+# dispatcher fields that g_parseSubCmdScriptPath would derive from
+# the .sub.* filename, but explicitly: pass the sub-tool's
+# directory and the name of the command inside it.
+#
+#   g_subTool "$sub_tool_dir" "$sub_cmd"
+#
+# After this call:
+#   s_sub_cmd       = X (the part of s_file before .sub.*)
+#   s_dest_cmd      = $2 (the sub-command name)
+#   s_dest_path     = $1/$2 (the sub-tool script path, even if it
+#                     doesn't exist on disk; g_readConfig + g_dispatch
+#                     treat it as a context root)
+#   s_isDispatcher  = true
+function g_subTool ()
+{
+  s_sub_cmd="${s_file%%.sub.*}" # X
+
+  s_dest_path="$1/$2"
+  s_dest_cmd="$2"
+  s_isDispatcher=true
 }
 
 function g_aliasDispatch ()
@@ -825,6 +839,8 @@ function g_dispatch ()
 
     local prev_breadcrumbs="$breadcrumbs"
     breadcrumbs+=" ${s_sub_cmd:-$s_cmd}"
+
+    g_parseSubCmdScriptPath "$s_path"
     g_executeScriptPath "$s_path" "${args[@]}"
     breadcrumbs="$prev_breadcrumbs"
 
@@ -906,6 +922,8 @@ function g_eachSubMetaDo ()
       do
         if [[ -f "$path" ]]; then
           unset s_alias  s_path s_dir s_description c_cmd s_sub_cmd
+
+          g_parseSubCmdScriptPath "$path"
           METADATAONLY=true g_executeScriptPath "$path" ""
           $filter && $action ${@} && found=true
         fi
@@ -1078,14 +1096,13 @@ function g_listAllSubCmds ()
   # destination's.
 
   for s_dir in "${iteration_locations[@]}" ; do
-    for s_path in "$s_dir"/*.sub.*.cmd.* ; do
+    for s_path in "$s_dir"/*.sub.* ; do
       [[ -f "$s_path" ]] || continue
       g_parseSubCmdScriptPath "$s_path"
+
+      METADATAONLY=true g_executeScriptPath "$s_path" ""
       $s_isDispatcher || continue
       [[ -n "$s_dest_cmd" ]] || continue
-
-      # Source the dispatcher so its s_description/s_usage become available.
-      METADATAONLY=true g_executeScriptPath "$s_path" ""
 
       # Re-anchor to the destination suite and recurse with an extended crumb.
       g_readConfig "$s_dest_path"
@@ -1271,10 +1288,10 @@ function g_handleAutocomplete ()
       if g_findSubCommandScript "$pw"; then
         navigated_subcmd=true
         g_parseSubCmdScriptPath "$s_path"
+
+        METADATAONLY=true g_executeScriptPath "$s_path" ""
         if $s_isDispatcher && [[ -n "$s_dest_path" ]]; then
           g_readConfig "$s_dest_path"
-        else
-          METADATAONLY=true g_executeScriptPath "$s_path" ""
         fi
       fi
     fi
