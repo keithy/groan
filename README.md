@@ -41,6 +41,16 @@ Sub-commands in one folder can act as dispatchers into another folder's command 
 Fork **keithy/groan** to **yourrepo/yourcommand** then create your working branch with the name of your
 new command. To contibute your command back submit a pull-request.
 
+## Branches
+
+`main` is for non breaking changes, `beta` is for cutting edge changes.
+
+Breaking in `beta`: v2.5 no longer derives sub-dispatcher destination paths from the
+filename. Sub-dispatchers must call `g_subTool` to declare their target. The `.sub.`
+and `.cmd.` filename markers are still used for discovery (the framework matches
+`*.sub.*` and walks the matching scripts), but the segments no longer encode the
+destination.
+
 ## History
 
 This incarnation of groan was conceived in about 2009, in 2017 I used 'sub' extensively 
