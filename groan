@@ -24,17 +24,17 @@ g_options_common_vertical=\
 --help         | -H | -?  usage help for a command
 --quiet        | -Q       quiet mode
 --verbose      | -V       verbose output
-+debug         | +D       users debug (all +GD)
 --dry-run      | -N       refrain from action
 --confirm      | -Y       perform action (not a dry run)
 --config=<cfg> | -C=<cfg> alternative config
---theme=0                 select a theme (0=off)
+--theme=0      |          select a theme (0=off)
+ +debug        | +D       users debug (all +GD)
 "
 
 g_options_common_horizontal=\
 "
 --help --quiet --verbose +debug
- -H     -Q      -V        +D
+ -H     -Q      -V       +D
 "
 
 ##############################################################
@@ -115,23 +115,19 @@ function g_readConfig () # from conf files
   #git bash has /tmp
   #[[ "$u_PLATFORM" == *msys* ]] && g_tmp="$HOME/AppData/Local/Temp"
 
-  bold=$'\e[1m'      # Style Bold
-  dim=$'\e[2m'       # Style Dim
-  italic=$'\e[3m'    # Style Italic
-  underline=$'\e[4m' # underline
-  reversed=$'\e[7m'  # reversed
-  reset=$'\e[0m'     # Reset
-  
+  bold=$'\e[1m'       ; dim=$'\e[2m'   ; italic=$'\e[3m'      ; underline=$'\e[4m' 
+  reversed=$'\e[7m'   ; reset=$'\e[0m' ; green=$'\e[1m\e[32m' ; red=$'\e[1m\e[31m'
+  cyan=$'\e[1m\e[36m' ; yellow=$'\e[1m\e[33m'
+
   case $THEME in
     none | off | 0)
-      bold=$''           # Style Bold
-      dim=$''            # Style Dim
-      italic=$''         # Style Italic
-      underline=$'' # underline
-      reversed=$''  # reversed
-      reset=$''          # Reset
+      bold='' ; dim='' ; italic='' ; underline=''
+      reversed='' ; reset='' ; green='' ; red=''
+      cyan='' ; yellow=''
     ;;
   esac
+
+  color  () { printf '%s' "${!1}" ; shift ; "$@" ; printf '%s' "$reset"; }
 
   g_config_file_options=(   "global"           "context"             "user")
   g_config_file_locations=( "${g_dir}/config"  "${g_dir}/../config"  "$HOME/.config/${g_dirname}" )
@@ -553,7 +549,7 @@ function p_usage ()
   _p_usage
 
   [[ -n ${s_usage_+x} ]] && printf "${s_usage_}"
-  return 0
+  return 0 # needed
 }
 
 function p_kv ()
@@ -562,10 +558,12 @@ function p_kv ()
   return 0 # needed
 }
 
-function g_debug_kv ()
+function p_debug_kv ()
 {
-  $GDEBUG && p_kv "${1}" "${!1:-}${2:-}"
-  return 0 #(neded)
+  $DDEBUG || return 0
+  for v in "$@" ; do
+     p_kv "${v}" "${!v:-}"
+  done
 }
 
 function p_echo () {
@@ -691,21 +689,25 @@ function g_parseSubCmdScriptPath ()
   # dispatcher-specific code below can rely on them.
   g_parseCmdScriptPath "$1"
 
+  # s_file is X.sub.Y.cmd.Z.ext
   s_sub_cmd=""
   s_dest_cmd=""
   s_dest_path=""
   s_dest_subcmd_name=""
   s_isDispatcher=false
 
-  local scriptRoute="${s_file%%.cmd.*}"
+  local scriptRoute="${s_file%%.cmd.*}" # X.sub.Y
 
   if [[ "$scriptRoute" =~ \.sub\. ]]; then
     s_isDispatcher=true
     if [[ -f "$s_path" ]]; then
-      s_sub_cmd="${scriptRoute%%.sub.*}"
-      s_dest_cmd="${scriptRoute#*sub.}"
+      s_sub_cmd="${scriptRoute%%.sub.*}" # X
+      s_dest_cmd="${scriptRoute#*sub.}" # Y  
       if [[ "$s_dest_cmd" =~ \. ]]; then
-        s_dest_cmd="${s_dest_cmd//./\/}"
+        # temporarily replace .. with ~~/ to avoid confusion with the next step
+        s_dest_cmd="${s_dest_cmd//../~~}" 
+        s_dest_cmd="${s_dest_cmd//./\/}" # Y becomes Y/Z if Y has dots
+        s_dest_cmd="${s_dest_cmd//~~/../}" # restore .. back to ..  
         s_dest_path="${s_dir%/*}/${s_dest_cmd}"
       else
         s_dest_path="${s_dir%/*}/${s_dest_cmd}/${s_sub_cmd}"
