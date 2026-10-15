@@ -5,7 +5,8 @@
 #                                        -- Martin Fowler
 #
 ##############################################################
-# The groan framework is implemented by one script < 800 loc.
+# The groan framework is one script, ~1000 code lines,
+# fully covered by a companion test suite (see groan-specs/).
 #
 # variable/function naming conventions key:
 # g_ - groan/global
@@ -337,6 +338,27 @@ function g_executeScriptPath ()
   g_subcmd_locations=("${bk[@]}")
 }
 
+function u_realpath ()
+{
+  # Resolve a path to its absolute, canonical form (follows symlinks).
+  # Prefers the external realpath; on hosts without it, falls back to
+  # cd/pwd -P. Echoes the resolved path, or empty string on failure.
+  #
+  # Always returns 0. Callers operating under `set -e` will not
+  # abort when the path is unresolvable — they can check the empty
+  # string instead.
+  local p="$1"
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$p" 2>/dev/null
+  else
+    local dir base
+    dir="$(dirname -- "$p")"
+    base="$(basename -- "$p")"
+    (cd -- "$dir" 2>/dev/null && printf '%s/%s\n' "$(pwd -P)" "$base")
+  fi
+  return 0
+}
+
 function _g_executeScriptPath ()
 {  
   #s_alias="${s_alias:-$s_cmd}"
@@ -396,13 +418,10 @@ function _g_executeScriptPath ()
         # symlinks and confirm the resolved path is under one of the
         # g_subcmd_locations[] directories.
         local resolved safe=false
-        if command -v realpath >/dev/null 2>&1; then
-          resolved="$(realpath "$s_path" 2>/dev/null)"
-        else
-          resolved="$(cd -- "$(dirname -- "$s_path")" 2>/dev/null && pwd -P)/$(basename -- "$s_path")"
-        fi
+        resolved="$(u_realpath "$s_path")"
         [[ -z "$resolved" ]] && { p_echo "Refused: cannot resolve $s_path"; return 1; }
         for allowed in "${g_subcmd_locations[@]}"; do
+          allowed="$(u_realpath "$allowed")"
           if [[ "$resolved" == "$allowed"/* ]] || [[ "$resolved" == "$allowed" ]]; then
             safe=true
             break

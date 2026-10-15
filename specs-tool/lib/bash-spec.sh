@@ -15,6 +15,18 @@
 ## [[ some_expression ]]
 ## should_fail
 ##
+## tearDown function_name                       Register a cleanup function
+##                                                to run before the spec
+##                                                exits. Use this instead
+##                                                of declaring your own
+##                                                EXIT trap, which would
+##                                                clobber bash-spec's
+##                                                output_results handler.
+##                                                Example:
+##                                                  function tearDown {
+##                                                    rm -rf "$sandbox"
+##                                                  }
+##
 # Original Author: Dave Nicolette
 # Version 1.0.0 29 Jul 2014
 # Release
@@ -256,7 +268,11 @@ function to_have_mode {
     if [[ "$_os_" == Linux ]]; then
       _actual_="$(stat -c %A $_fullname_)"
     else
-      _actual_="$(stat $_fullname_ | cut -f 3 -d ' ')"
+      # BSD/macOS stat: extract the symbolic mode from the Access line.
+      # The `cut -f 3 -d ' '` form used previously picked up the wrong
+      # field because BSD stat emits multi-line output with leading
+      # header words like "File:" and "Size:" that have no spaces.
+      _actual_="$(stat "$_fullname_" | awk '/^Access:/{ match($0,/\(([0-9]+\/)?([-rwxdlcst]+)\)/,a); print a[2]; exit }')"
     fi
     [[ "$_actual_" =~ "$_expected_" ]] && _pass_=true
   else
@@ -287,3 +303,15 @@ while true; do
 done
 
 trap output_results EXIT
+
+# Optional teardown hook. If the spec defines a function named
+# `tearDown`, invoke it before the summary so the spec doesn't
+# have to clobber our EXIT trap. Wrapped in `set +e` so a failing
+# teardown doesn't suppress the SUMMARY line. If `tearDown` isn't
+# defined, this is a no-op.
+#
+# To avoid clobbering user teardown if the spec also sets its own
+# EXIT trap, we wrap output_results in a sub-trap rather than
+# replacing it. Order: user teardown -> output_results.
+_teardown_set='set +e; if declare -F tearDown >/dev/null; then tearDown; fi; output_results'
+eval "trap '$_teardown_set' EXIT"
