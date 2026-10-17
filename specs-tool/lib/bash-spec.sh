@@ -4,16 +4,16 @@
 ##
 ## expect variable [not] to_be value               Compare scalar values for equality
 ## expect variable [not] to_match regex            Regex match
-## expect array [not] to_contain value             Look for a value in an array
+## expect array [not] to_contain "*bash\ spec*"   Look for a value in an array (glob match)
 ## expect_array arrayname [not] to_contain value   Look for a value in an array (by ref)
-## expect_var variablename [not] to_contain value  Look for a value in a variable (by ref)
+## expect_var variablename [not] to_contain "*value*"  Look for a value in a variable (glob match)
 ## expect filename [not] to_exist                  Verify file existence
 ## expect filename [not] to_have_mode modestring   Verify file mode (permissions)
 ## expect [not] to_be_true condition               Verify exit mode as boolean
 ## [[ some_expression ]]
-## should_succeed
+## should_succeed "Optional Message On Failure"
 ## [[ some_expression ]]
-## should_fail
+## should_fail "Optional Message On Success"
 ##
 ## tearDown function_name                       Register a cleanup function
 ##                                                to run before the spec
@@ -144,6 +144,7 @@ function pass {
 }
 
 function fail {
+  [[ -n "${_msg_:-}" ]] && echo "**** FAIL - ${_msg_}" && _msg_="" && return
   echo "**** FAIL - expected:$( if [[ "$_negation_" == true ]]; then echo ' NOT'; fi; ) '$_expected_' | actual: '${_actual_[@]}'"
 }
 
@@ -152,7 +153,8 @@ function should_succeed {
   _expected_=0
   _negation_=false
   _pass_=false
-  [[ $_actual_ == $_expected_ ]] && _pass_=true
+  _msg_=""
+  [[ $_actual_ == $_expected_ ]] && _pass_=true || _msg_="${1:-}"
   _expected_="0(success)"
   _actual_="$_actual_(failed)"
   _negation_check_
@@ -163,10 +165,32 @@ function should_fail {
   _expected_=0
   _negation_=false
   _pass_=true
-  [[ $_actual_ == $_expected_ ]] && _pass_=false
+  _msg_=""
+  [[ $_actual_ == $_expected_ ]] && _pass_=false && _msg_="${1:-}"
   _expected_="NOT 0(fail)"
   _actual_="0(succeeded)"
   _negation_check_
+}
+
+# Validate the matcher left in $1 after expect/expect_var/expect_array
+# consume their actuals. Without this check, a typo like
+# `expect "$out" not_to_match "..."` slips through (not_to_match is
+# not a defined matcher), gets accumulated as a value, runs past
+# the end of args, and surfaces as a confusing
+# `bash-spec.sh: line 180: $1: unbound variable` from the loop's
+# `set -u` slice. Detecting unknown matchers here converts that
+# into an actionable diagnostic.
+function _expect_require_matcher_ {
+  case "${1:-}" in
+    "") printf 'expect: ran out of arguments without finding a matcher\n' >&2 ; exit 2 ;;
+    not|to_be|to_match|to_contain|to_exist|to_have_mode|to_be_true) ;;
+    not_to_match|not_to_contain|not_to_exist|not_to_have_mode|not_to_be|not_to_be_true)
+      printf 'expect: matcher "%s" is not a recognised matcher.\n' "$1" >&2
+      printf '         Did you mean:  not <matcher>  (split into two tokens)?\n' >&2
+      exit 2
+      ;;
+    *) printf 'expect: unknown matcher "%s"\n' "$1" >&2 ; exit 2 ;;
+  esac
 }
 
 function expect {
@@ -178,7 +202,7 @@ function expect {
     _actual_+=("$1")
     shift
   done
-  #echo $( IFS=$'|'; echo "$*" )
+  _expect_require_matcher_ "$1"
   "$@"
 }
 
@@ -191,6 +215,7 @@ function expect_var {
     _actual_+=("${!1}")
     shift
   done
+  _expect_require_matcher_ "$1"
   "$@"
 }
 
@@ -201,6 +226,7 @@ function expect_array {
   until [[ "${1:0:3}" == to_ || "$1" == not || -z ${1+x} ]]; do
     shift
   done
+  _expect_require_matcher_ "$1"
   "$@"
 }
 
