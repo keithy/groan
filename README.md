@@ -33,8 +33,11 @@ Support for standard options like --debug, --quiet is also included.
 Groan is recursively merge-able/compose-able. Assemble a named suite of sub-command scripts in a folder, 
 that folder may be made available alongside, or nested as sub-commands within another suite.
 
-Sub-commands in one folder can act as dispatchers into another folder's command suite, following the
-`<name>.sub.<target>.cmd.<entry>.sh` naming convention.
+Sub-commands in one folder can act as dispatchers into another folder's command suite.
+The canonical pattern is a plain `<name>.cmd.sh` file with `g_subTool` + `g_readConfig`
++ `g_aliasDispatch` in the body. See
+[`SKILL.md`](SKILL.md#canonical-sub-tool-with-alias-dispatcher) for the full
+example and the comparison with the legacy `*.sub.*.cmd.*` filename pattern.
 
 ## How to fork and roll your own command
 
@@ -44,12 +47,6 @@ new command. To contibute your command back submit a pull-request.
 ## Branches
 
 `main` is for non breaking changes, `beta` is for cutting edge changes.
-
-Breaking in `beta`: v2.5 no longer derives sub-dispatcher destination paths from the
-filename. Sub-dispatchers must call `g_subTool` to declare their target. The `.sub.`
-and `.cmd.` filename markers are still used for discovery (the framework matches
-`*.sub.*` and walks the matching scripts), but the segments no longer encode the
-destination.
 
 ## History
 
@@ -182,20 +179,16 @@ without the file being executable.
 
 #### Dispatcher aliases
 
-A sub-command in one folder can alias to a sub-command suite in
-another folder. The naming convention is:
+The recommended way to expose a sub-tool as a top-level command is the
+canonical body pattern: a plain `<name>.cmd.sh` file with `g_subTool` +
+`g_readConfig` + `g_aliasDispatch` in the body. See the
+[`SKILL.md` section](SKILL.md#canonical-sub-tool-with-alias-dispatcher)
+for the worked example.
 
-```
-<X>.sub.<Y>.cmd.<Z>.<ext>
-```
-
-Where `<X>` is the alias name, `<Y>` is the destination command suite,
-and `<Z>` is the entry sub-command to pass to that suite. The framework
-recognises `*.sub.*.cmd.*` as a dispatcher pattern and follows the
-alias when `--all` recurses.
-
-For example, `commands/nested.sub.nested.cmd.sh` in the parent suite
-makes `groan nested` invoke `./nested/nested` with no argument.
+The older `<X>.sub.<Y>.cmd.<Z>.<ext>` filename pattern still works for
+discovery (the framework recognises `*.sub.*.cmd.*` and walks the
+matching scripts), but the destination must be declared explicitly via
+`g_subTool` in the body — the filename segments no longer encode it.
 
 #### Help topics
 
@@ -236,13 +229,6 @@ A number of template conf files can be provided, the user can choose a file and 
 ### Subcommand - self-install
 
     groan setup self-install --link /usr/local/bin --confirm
-
-## Sub-command aliasing
-
-A dispatcher script named `<X>.sub.<Y>.cmd.<Z>.<ext>` aliases sub-command `<X>` to
-the `<Y>` command suite, passing `<Z>` as the entry sub-command. Place such a
-script in the parent's `commands/` folder; the framework recognises the
-`*.sub.*.cmd.*` pattern and follows the dispatcher when recursing.
 
 ## Test Suite
 
