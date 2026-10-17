@@ -245,6 +245,40 @@ ln -f path/to/groan mytool/<suite>-tool
 The convention is: every entry point is the same dispatcher; the only
 difference is the config file and the subcmd path.
 
+## Canonical sub-tool-with-alias dispatcher
+
+A leaf in the parent's `commands/` can chain to a leaf in a sub-tool's
+`commands/` without a `.sub.` segment in its filename. Use this when
+the parent exposes a sub-tool's leaf as a first-class command (e.g.
+`angel box` resolving to `bashaform/host/commands/box.cmd.sh`). The
+filename stays plain `<name>.cmd.sh` so the framework treats it as a
+leaf-shaped dispatcher, not an auto-detected alias. The body does the
+work via `g_subTool`, `g_readConfig`, then `g_aliasDispatch` to the leaf
+name.
+
+```bash
+# commands/box.cmd.sh  (canonical example)
+me "$BASH_SOURCE" #tradition
+
+s_description="host box management (via bashaform)"
+
+$METADATAONLY && return
+
+g_subTool "${my_dir}/../bashaform/host" bashaform
+g_readConfig "$s_dest_path"
+g_aliasDispatch box
+```
+
+Both endpoints are leaves — there is no further sub-tool entry
+between them. `g_subTool` declares the destination sub-tool for
+config anchoring; `g_readConfig` re-roots `g_subcmd_locations` to the
+sub-tool's `commands/`; `g_aliasDispatch box` then finds and runs
+`bashaform/host/commands/box.cmd.sh`.
+
+This pattern is preferred over the `.sub.*.cmd.*` filename pattern
+when the parent and sub-tool both resolve to leaves, because the body
+makes the routing explicit and self-documenting.
+
 ## Config layering
 
 The dispatcher reads `<prog>.conf` from these locations, in order, with
